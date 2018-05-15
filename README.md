@@ -40,30 +40,21 @@ docker run -v /path/to/app:/app -p 9090:9090 charade
       /Users/{id}/Projects
     Projects detail should list Users
       /Projects/{id}/Users
-
-
-
-### Pseudocode
-  If a table has more than one foreign key and those FKs each reference tables
+- If a table has more than one foreign key and those FKs each reference tables
   with no Foreign keys, build a many-to-many relationship endpoint:
       i.e. /TableA/{id}/TableB
 
 ### API
 ```
-GET       /users
-GET       /users/123
-POST      /users
-PUT/PATCH /users/123
+GET       /table_names
+GET       /table_names/id
+POST      /table_names
+PUT/PATCH /table_names/123
 
-GET       /computers
-GET       /computers/123
-POST      /computers
-PUT/PATCH /computers/123
-
-GET       /locations
-GET       /locations/123
-POST      /locations
-PUT/PATCH /computers/123
+GET       /synth_resources
+GET       /synth_resources/123
+POST      /synth_resources
+PUT/PATCH /synth_resources/123
 ```
 
 ### REST functionality
