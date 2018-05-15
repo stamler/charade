@@ -1,0 +1,10 @@
+# .gitignore file for charade
+
+*.log
+*.csv
+*.pyc
+*.pid
+config.py
+populate_test_db.sh
+isContainerized
+.DS_Store
