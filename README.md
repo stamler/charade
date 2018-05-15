@@ -2,6 +2,7 @@
 A Simultaneous Translator for mysql and JSON
 
 MIT License
+
 Copyright (c) 2018 Dean Stamler
 
 Charade is a Python WSGI application that connects to a mysql database, loads the schema, and then presents a sensible JSON API based on that schema. Through configuration, it can also provide finer control over the JSON API it generates. Authentication is provided by Microsoft Azure AD.
@@ -24,3 +25,58 @@ docker run -v /path/to/app:/app -p 9090:9090 charade
 - Make JSON api return errors formatted at JSON
 - Finish all GET requests without customizations
 - Build out generalized POST for creating new mysql objects
+
+### Roadmap
+
+- Foreign Key Handling:
+  1-to-N relationship behaviour (SoftwareTitles to SoftwareKeys):
+    SoftwareTitles detail should list SoftwareKeys
+      /SoftwareTitles/{id}/SoftwareKeys
+- 1-to-N relationship behaviour (current and historical) (Locations to Computers)
+    Locations detail should list Computers
+      /Locations/{id}/Computers
+- N-to-N relationship behaviour (Users to Projects)
+    Users detail should list Projects
+      /Users/{id}/Projects
+    Projects detail should list Users
+      /Projects/{id}/Users
+
+
+
+### Pseudocode
+  If a table has more than one foreign key and those FKs each reference tables
+  with no Foreign keys, build a many-to-many relationship endpoint:
+      i.e. /TableA/{id}/TableB
+
+### API
+```
+GET       /users
+GET       /users/123
+POST      /users
+PUT/PATCH /users/123
+
+GET       /computers
+GET       /computers/123
+POST      /computers
+PUT/PATCH /computers/123
+
+GET       /locations
+GET       /locations/123
+POST      /locations
+PUT/PATCH /computers/123
+```
+
+### REST functionality
+- Access Control including restriction to users on a specific Azure AD tenant perhaps based on a users table
+- Validation of received values against column_type and translation as need (such as datetime)
+- Make the code clearer for table, column and type access, perhaps using named tuples
+- PATCH and GET where IDs are specified
+- POST with multiple entries (likely an extension of the base software like middleware or a plugin)
+- More complex queries (likely an extension of the base software like middleware or a plugin)
+
+
+### Other
+- Write Tests and TEST
+- Clean up the code and make it generic for deployment
+- Create installer
+- Build in ability to run against other databases like SQLite, PostgreSQL, or Redshift
