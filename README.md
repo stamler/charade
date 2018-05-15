@@ -25,6 +25,9 @@ docker run -v /path/to/app:/app -p 9090:9090 charade
 - Make JSON api return errors formatted at JSON
 - Finish all GET requests without customizations
 - Build out generalized POST for creating new mysql objects
+- Write other Tests and TEST
+- Clean up the code and make it generic for deployment
+- Build in ability to run against other databases like SQLite, PostgreSQL, or Redshift
 
 ### Roadmap
 
@@ -64,10 +67,3 @@ PUT/PATCH /synth_resources/123
 - PATCH and GET where IDs are specified
 - POST with multiple entries (likely an extension of the base software like middleware or a plugin)
 - More complex queries (likely an extension of the base software like middleware or a plugin)
-
-
-### Other
-- Write Tests and TEST
-- Clean up the code and make it generic for deployment
-- Create installer
-- Build in ability to run against other databases like SQLite, PostgreSQL, or Redshift
