@@ -1,0 +1,9 @@
+production_db=<PRODUCTION DATABASE NAME>
+test_db=<TEST DATABASE NAME>
+mysqlhost=<DATABASE HOST>
+username=<USER NAME>
+password=<PASSWORD>
+
+mysql --host=$mysqlhost --user $username --password=$password -e "DROP DATABASE $test_db;"
+mysql --host=$mysqlhost --user $username --password=$password -e "CREATE DATABASE $test_db;"
+mysqldump --complete-insert --host=$mysqlhost --user=$username --password=$password $production_db | mysql --host=$mysqlhost --user=$username --password=$password $test_db

@@ -8,3 +8,5 @@ config.py
 populate_test_db.sh
 isContainerized
 .DS_Store
+experiments/
+start_uwsgi.sh
