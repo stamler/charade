@@ -1,0 +1,24 @@
+--- # Synths
+Synth_Name_1:
+  tables:
+    table_name1:
+      - fieldname1
+      - fieldname2
+      - fieldname3
+    table_name2:
+      - fieldname1
+      - fieldname2
+      - fieldname3
+  relationships:
+    - table_name1.id = table_name2.table_name1_id
+  key:
+    - table_name1.id
+  permissions:
+    r:
+      - groupid
+      - userid1
+      - userid2
+    rw:
+      - userid_admin
+    w:
+      - userid_groomer
