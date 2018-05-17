@@ -7,7 +7,6 @@ import json
 import mysql.connector
 import logging
 from database import db_obj
-import ResourceManager
 
 class Resource(object):
     def __init__(self, name, res):
@@ -34,7 +33,7 @@ class Resource(object):
         if self.is_root:
             resp.status = falcon.HTTP_200
             resp.content_type = falcon.MEDIA_HTML
-            body = { 'data': ResourceManager.rm_obj.resources }
+            body = { 'data': db_obj.resources }
             resp.body = json.dumps(body, default=str)
             return
 
@@ -62,19 +61,9 @@ class Resource(object):
                     data = dict(zip(cursor.column_names, rows[0]))
                     resp.status = falcon.HTTP_200
 
-                    # get any related child resources
-                    children = ResourceManager.rm_obj.resources[self.name]['children']
-                    if len(children) > 0:
-                        for child in children:
-                            resource = child['object']['object']
-                            o = { child['fk']:id }
-                            where_clause, vals = resource.gen_get_tuple(o)
-                            query = resource.get_query + where_clause
-                            cursor.execute(query, vals)
-                            c_data = []
-                            for row in cursor:
-                                c_data.append(dict(zip(cursor.column_names, row)))
-                            included[resource.name] = c_data
+                    # get any related child resources here and put them
+                    # inside included {} declared above
+
             else:
                 # a collection was requested
                 where_clause, vals = self.gen_get_tuple(req.params)

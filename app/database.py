@@ -10,7 +10,12 @@ from sqlalchemy.ext.automap import automap_base
 class Database(object):
 
     def __init__(self, config_dict):
+        # Configure logging
         self.log = logging.getLogger(__name__)
+        self.log.setLevel(logging.DEBUG)
+        ch = logging.StreamHandler()
+        ch.setLevel(logging.DEBUG)
+        self.log.addHandler(ch)
         self.log.debug("__init__ Database")
 
         # Configuration-related initialization
@@ -37,6 +42,9 @@ class Database(object):
         self.Base.prepare(engine, reflect=True, classname_for_table=self.custom_classname)
         self.session = Session(engine)
 
+        # Load resources once and cache them
+        self.resources = self.__get_resources()
+
         # PENDING_DELETION Vestigial code (2 lines) to be deleted after transition to SQLAlchemy
         self.__cnx = mysql.connector.connect(**self.dbconfig)
         self.__cnx.set_converter_class(CustomMySQLConverter)
@@ -51,12 +59,12 @@ class Database(object):
     # Read the database and load in table and column names, EXCLUDING VIEWS.
     #NB previous version without SQLALchemy included VIEWS
     # This info is used to generate resource objects and routes
-    def get_resources(self):
+    def __get_resources(self):
         # describe the root resource
         resources = { "Root": { "Title_Case": "Root", "CamelCase": "Root",
                                 "snake_case": "root", "table": None,
-                                "URIs":["/"], "object":None,
-                                "children":[] }}
+                                "URIs":["/"], "object":None
+                                 }}
 
         self.table_columns = {}
 
@@ -81,13 +89,8 @@ class Database(object):
             resources[camel_case]['table'] = subclass.__table__.name
             resources[camel_case]['URIs'] = [uri_base, uri_id]
             resources[camel_case]['object'] = None
-            resources[camel_case]['children'] = []
 
         return resources
-
-    # PENDING_DELETION Vestigial method may be replaced with SQLAlchemy functionality
-    def get_child_resources(self):
-        return {}
 
     # custom class names
     def custom_classname(self, base, tablename, table):

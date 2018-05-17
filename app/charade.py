@@ -7,7 +7,8 @@ os.chdir(os.path.dirname(os.path.realpath(__file__)))
 
 import falcon
 import config
-from ResourceManager import rm_obj
+from database import db_obj
+from Resource import Resource
 from middleware import AzureADTokenValidator, CORSComponent, CacheController
 
 # Initialize validation middleware
@@ -21,5 +22,8 @@ cache_controller = CacheController()
 # Create the falcon API instance (a WSGI app)
 app = falcon.API(middleware = [ cors, cache_controller ]) #validator ])
 
-# hook up the routes from the ResourceManager
-rm_obj.add_routes(app)
+# instantiate resources, hook up routes and store references to them in db_obj
+for name, resource in db_obj.resources.items():
+    resource['object'] = Resource(name, resource)
+    for uri in resource['URIs']:
+        app.add_route(uri, resource['object'])
