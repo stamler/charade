@@ -3,7 +3,9 @@ import json
 import logging
 import config
 import os.path
-from collections import defaultdict
+from sqlalchemy import create_engine
+from sqlalchemy.orm import Session
+from sqlalchemy.ext.automap import automap_base
 
 class Database(object):
 
@@ -14,6 +16,8 @@ class Database(object):
         # Configuration-related initialization
         self.dbconfig = config_dict['mysql']
         self.appconfig = config_dict['app']
+
+        # PENDING_DELETION These 2 lines may become Vestigial after full SQLAlchemy transition
         self.max_multi_responses = self.appconfig.get('max_multi_responses', 5)
         self.custom_queries = self.appconfig.get('custom_queries', None)
 
@@ -24,102 +28,70 @@ class Database(object):
             self.log.debug("App detected it is running in a container")
             self.dbconfig['host'] = "host.docker.internal"
 
-        # Connect to the database
-        print(self.dbconfig)
+        self.Base = automap_base()
+        connection_string = "mysql+mysqlconnector://{}:{}@{}/{}".format(
+                self.dbconfig['user'], self.dbconfig['password'],
+                self.dbconfig['host'], self.dbconfig['database']
+            )
+        engine = create_engine(connection_string)
+        self.Base.prepare(engine, reflect=True, classname_for_table=self.custom_classname)
+        self.session = Session(engine)
+
+        # PENDING_DELETION Vestigial code (2 lines) to be deleted after transition to SQLAlchemy
         self.__cnx = mysql.connector.connect(**self.dbconfig)
         self.__cnx.set_converter_class(CustomMySQLConverter)
 
+    # PENDING_DELETION Vestigial method to be deleted with SQLAlchemy functionality
     def get_connection(self):
         return self.__cnx
 
-    # Read the database and load in table and column names, including VIEWS.
+    def get_session(self):
+        return self.session
+
+    # Read the database and load in table and column names, EXCLUDING VIEWS.
+    #NB previous version without SQLALchemy included VIEWS
     # This info is used to generate resource objects and routes
     def get_resources(self):
-        cnx = self.get_connection()
-        cursor = cnx.cursor()
-
         # describe the root resource
         resources = { "Root": { "Title_Case": "Root", "CamelCase": "Root",
                                 "snake_case": "root", "table": None,
                                 "URIs":["/"], "object":None,
                                 "children":[] }}
 
-        # Get schema dict where keys are 'table_name' and values
-        # are lists of column name/type tuples for that table
-        query_schema = ("SELECT table_name, column_name, column_type "
-                    "FROM information_schema.columns "
-                    "WHERE table_schema = %s "
-                    "ORDER BY table_name, ordinal_position")
-        cursor.execute(query_schema,(self.dbconfig['database'],))
-        schema = defaultdict(list)
-        for (table_name, column_name, column_type) in cursor:
-            schema[table_name].append((column_name, column_type))
-
-        # Get primary keys for each table (NOT VIEW) in the database
-        pks = {}
-        query_pks = ("SELECT table_name, column_name "
-                    "FROM information_schema.key_column_usage "
-                    "WHERE table_schema = %s AND constraint_name = 'PRIMARY' "
-                    "GROUP BY table_name")
-        cursor.execute(query_pks,(self.dbconfig['database'],))
-        for (table_name, column_name) in cursor:
-            pks[table_name] = column_name
-
-        # side-effect of get_resources() call is update of self.table_columns
         self.table_columns = {}
 
-        # From schema dict create a list of resource dicts each having
-        # keys for the table name and uri_template skipping "tables_to_exclude"
-        # Also create a self.table_columns dict where keys are table names
-        # and values are a column list
-        for (k,v) in schema.items():
+        for subclass in self.Base.__subclasses__():
+            # dict key is table_name, value is list of
+            # tuples of format (column_name, column_type)
+            self.table_columns[subclass.__table__.name] = [(c.name, c.type) for c in subclass.__table__.columns]
 
-            # Set the self.table_columns
-            self.table_columns[k] = v
-
-            if k in self.appconfig["tables_to_exclude"]:
+            if subclass.__table__.name in self.appconfig["tables_to_exclude"]:
                 continue
 
-            snake_case = self.strip_prefix(k)
-            camel_case = self.snake_to_camel(snake_case)
+            snake_case = self.strip_prefix(subclass.__table__.name)
+            camel_case = subclass.__name__
             uri_base = '/' + camel_case
             # Create 2nd URI with the field expression for {id}
             uri_id = uri_base + r"/{id:int(min=0)}"
 
-            # Add each table and corresponding URIs to resources dict
             resources[camel_case] = {}
             resources[camel_case]['Title_Case'] = self.snake_to_title(snake_case)
             resources[camel_case]['CamelCase'] = camel_case
             resources[camel_case]['snake_case'] = snake_case
-            resources[camel_case]['table'] = k
+            resources[camel_case]['table'] = subclass.__table__.name
             resources[camel_case]['URIs'] = [uri_base, uri_id]
             resources[camel_case]['object'] = None
             resources[camel_case]['children'] = []
-            if pks.get(k, None):
-                resources[camel_case]['pk'] = pks.pop(k)
 
-        cursor.close()
         return resources
 
-    # Build child_resources dict where keys are resource name (CamelCase)
-    # and values are dicts with keys pk (refd_col),
-    # resource (CamelCase) and fk (col).
+    # PENDING_DELETION Vestigial method may be replaced with SQLAlchemy functionality
     def get_child_resources(self):
-        cnx = self.get_connection()
-        cursor = cnx.cursor()
-        query_child_tables = ("SELECT table_name, column_name, "
-                 "referenced_table_name, referenced_column_name "
-                 "FROM information_schema.key_column_usage "
-                 "WHERE table_schema = %s "
-                 "AND referenced_table_name IS NOT NULL "
-                 "ORDER BY referenced_table_name")
-        child_resources = defaultdict(list)
-        cursor.execute(query_child_tables,(self.dbconfig['database'],))
-        for (table, col, refd_table, refd_col) in cursor:
-            child_resources[self.snake_to_camel(self.strip_prefix(refd_table))].append({ "pk":refd_col, "fk": col,
-                    "object_name": self.snake_to_camel(self.strip_prefix(table)) })
-        cursor.close()
-        return child_resources
+        return {}
+
+    # custom class names
+    def custom_classname(self, base, tablename, table):
+        return self.snake_to_camel(self.strip_prefix(tablename))
 
     # Remove the tables_prefix
     def strip_prefix(self, the_input):
@@ -133,6 +105,7 @@ class Database(object):
     def snake_to_camel(self, the_input):
         return ''.join(w.capitalize() for w in (the_input.rsplit('_')))
 
+# PENDING_DELETION This class will become Vestigial after full SQLAlchemy transition
 class CustomMySQLConverter(mysql.connector.conversion.MySQLConverter):
     """ A mysql.connector Converter that handles List and Dict type
     and spits out bytes as json """
