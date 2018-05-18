@@ -89,6 +89,7 @@ class Database(object):
             resources[camel_case]['table'] = subclass.__table__.name
             resources[camel_case]['URIs'] = [uri_base, uri_id]
             resources[camel_case]['object'] = None
+            resources[camel_case]['sqla_obj'] = subclass
 
         return resources
 

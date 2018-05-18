@@ -7,23 +7,25 @@ import json
 import mysql.connector
 import logging
 from database import db_obj
+from sqlalchemy.inspection import inspect
 
 class Resource(object):
-    def __init__(self, name, res):
+    def __init__(self, res):
         self.log = logging.getLogger(__name__)
-        self.log.debug("__init__ Resource: " + name)
-
-        if res and res.get('table', None):
-            self.name = name
-            self.__primary_key__ = res.get('pk', 'id')
-            self.db_table = res['table']
+        self.sqla_obj = res.get('sqla_obj', None)
+        if (self.sqla_obj):
+            self.name = self.sqla_obj.__name__
+            self.__primary_key__ = [k.name for k in inspect(self.sqla_obj).primary_key][0]
+            self.db_table = self.sqla_obj.__table__.name
             # list of tuples (column_name, column_type)
             self.db_table_columns = db_obj.table_columns[res['table']]
             self._load_sql()
             self.is_root = False
         else:
-            self.name = "Root"
             self.is_root = True
+            self.name = "Root"
+        self.log.debug("__init__ Resource: " + self.name)
+
 
     # Handle GET requests to a resource that represents all rows of a single
     # table in the database. If the request contains an id field expression
@@ -37,62 +39,50 @@ class Resource(object):
             resp.body = json.dumps(body, default=str)
             return
 
-        try:
-            cnx = db_obj.get_connection()
-            cursor = cnx.cursor()
-            query = self.get_query
+        session = db_obj.get_session()
 
-            included = {}
-            if id is not None:
-                # a single object was requested
-                query += " WHERE {} = %s".format(self.get_id_key)
-                cursor.execute(query, (id,))
-
-                # fetch all rows to determine rowcount otherwise it's -1
-                rows = cursor.fetchall()
-                assert len(rows) > -1
-
-                if len(rows) == 0:
-                    resp.status = falcon.HTTP_404
-                elif cursor.rowcount > 1:
-                    # multiple rows means database key not unique
-                    resp.status = falcon.HTTP_500
-                else:
-                    data = dict(zip(cursor.column_names, rows[0]))
-                    resp.status = falcon.HTTP_200
-
-                    # get any related child resources here and put them
-                    # inside included {} declared above
-
-            else:
-                # a collection was requested
-                where_clause, vals = self.gen_get_tuple(req.params)
-                query += where_clause
-                if len(vals) > 0:
-                    cursor.execute(query, vals)
-                else:
-                    cursor.execute(query)
-                data = []
-                for row in cursor:
-                    data.append(dict(zip(cursor.column_names, row)))
+        included = {}
+        if id is not None:
+            # a single object was requested
+            row = session.query(self.sqla_obj).get(id)
+            if (row is not None):
+                data = {c.key: getattr(row, c.key)
+                        for c in inspect(row).mapper.column_attrs}
                 resp.status = falcon.HTTP_200
 
-            cursor.close()
+                # get any related child resources here and put them
+                # inside included {} declared above
 
-            if resp.status == falcon.HTTP_200:
-                body = {'data': data }
-                if len(included) > 0:
-                    body['included'] = included
             else:
-                body = { "errors":["Something went south."]}
+                resp.status = falcon.HTTP_404
 
-            resp.body = json.dumps(body, default=str)
+        else:
+            # a collection was requested
+            # NB NEED TO REIMPLEMENT FILTERS FOR SQLALCHEMY
+            #where_clause, vals = self.gen_get_tuple(req.params)
+            #query += where_clause
+            #if len(vals) > 0:
+            #    cursor.execute(query, vals)
+            #else:
+            #    cursor.execute(query)
+            rows = session.query(self.sqla_obj).all()
+            data = []
+            for row in rows:
+                data.append({c.key: getattr(row, c.key)
+                        for c in inspect(row).mapper.column_attrs})
+            resp.status = falcon.HTTP_200
 
-        except mysql.connector.Error as e:
-            resp.body = { "errors": [str(cursor.statement) + " ERROR: {}".format(e)] }
 
-        except ValueError as f:
-            resp.body = { "errors":[f] }
+        if resp.status == falcon.HTTP_200:
+            body = {'data': data }
+            if len(included) > 0:
+                body['included'] = included
+        else:
+            body = { "errors":["Something went south."]}
+
+        resp.body = json.dumps(body, default=str)
+
+
 
     # Handle POST requests to a resource and creates a new row in the table
     # represented by the resource. This method handles incomplete fields-
