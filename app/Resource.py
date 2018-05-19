@@ -18,7 +18,7 @@ class Resource(object):
             self.__primary_key__ = [k.name for k in inspect(self.sqla_obj).primary_key][0]
             self.db_table = self.sqla_obj.__table__.name
             # list of tuples (column_name, column_type)
-            self.db_table_columns = db_obj.table_columns[res['table']]
+            self.db_table_columns = [(c.name, c.type) for c in inspect(self.sqla_obj).columns]
             self._load_sql()
             self.is_root = False
         else:
@@ -58,14 +58,13 @@ class Resource(object):
 
         else:
             # a collection was requested
-            # NB NEED TO REIMPLEMENT FILTERS FOR SQLALCHEMY
-            #where_clause, vals = self.gen_get_tuple(req.params)
-            #query += where_clause
-            #if len(vals) > 0:
-            #    cursor.execute(query, vals)
-            #else:
-            #    cursor.execute(query)
-            rows = session.query(self.sqla_obj).all()
+            rows = session.query(self.sqla_obj)
+
+            # Apply any query string filters
+            for f in self.get_query_params(req.params) :
+                rows = rows.filter(getattr(self.sqla_obj, f[0]) == f[1])
+
+            rows = rows.all()
             data = []
             for row in rows:
                 data.append({c.key: getattr(row, c.key)
@@ -266,24 +265,16 @@ class Resource(object):
 
     # Given request params, keep the valid ones for the resource then
     # generate a tuple in the correct order for SQL execute()
-    def gen_get_tuple(self, params):
+    def get_query_params(self, params):
         # Handle query params as follows:
         # TODO: Handle multiple values for same key as SQL 'OR' in WHERE
 
         # Create an empty list of parameter filter_values
         filter_values = []
-        where_clause = ""
-        # for each non-id entry in self.db_table_columns ...
-        for column, _ in self.db_table_columns[1:]:
+        # for each table column ...
+        for c in inspect(self.sqla_obj).columns:
             # ... that is also a key in the request query parameters
-            if column in params:
-                if len(filter_values) == 0:
-                    # it's the first matching param, create WHERE Clause
-                    where_clause = " WHERE {} = %s ".format(column)
-                else:
-                    # not the first matching param, add to the WHERE clause
-                    where_clause += "AND {} = %s ".format(column)
-                # then add its value to the filter_values list
-                filter_values.append(params[column])
-        # When the process is done, make filters into a tuple ...
-        return where_clause, tuple(filter_values)
+            if c.name in params:
+                # make a tuple then append to filter_values list
+                filter_values.append((c.name, params[c.name]))
+        return filter_values
