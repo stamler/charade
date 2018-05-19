@@ -24,7 +24,6 @@ class Database(object):
 
         # PENDING_DELETION These 2 lines may become Vestigial after full SQLAlchemy transition
         self.max_multi_responses = self.appconfig.get('max_multi_responses', 5)
-        self.custom_queries = self.appconfig.get('custom_queries', None)
 
         # If we're running inside docker, update the mysql host to
         # the docker host for tunnelling (expect the host is tunneling)
