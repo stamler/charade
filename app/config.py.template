@@ -17,13 +17,5 @@ config = {
     "tables_prefix": "company_",
     # A list of table names (strings) as they appear in the database
     "tables_to_exclude": ["company_table_with_custom_resource"],
-    "custom_queries": {
-        "company_items": {
-            "get": {
-                "query":"SELECT id as crunchy_id FROM company_items",
-                "id_key":"crunchy_id"
-            }
-        }
-    }
   }
 }
