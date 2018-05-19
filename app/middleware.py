@@ -14,7 +14,7 @@ class AzureADTokenValidator(object):
     def __init__(self,tenant_name,app_id,refresh_interval=3600):
         self.app_id = app_id
         self.tenant_name = tenant_name
-        self.log = logging.getLogger(__name__)
+        self.log = logging.getLogger()
         self.log.addHandler(logging.NullHandler())
 
         # Don't validate OPTIONS requests for preflighting

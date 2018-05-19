@@ -11,7 +11,7 @@ class Database(object):
 
     def __init__(self, config_dict):
         # Configure logging
-        self.log = logging.getLogger(__name__)
+        self.log = logging.getLogger()
         self.log.setLevel(logging.DEBUG)
         ch = logging.StreamHandler()
         ch.setLevel(logging.DEBUG)
