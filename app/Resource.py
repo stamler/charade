@@ -19,7 +19,6 @@ class Resource(object):
             self.db_table = self.sqla_obj.__table__.name
             # list of tuples (column_name, column_type)
             self.db_table_columns = [(c.name, c.type) for c in inspect(self.sqla_obj).columns]
-            self._load_sql()
             self.is_root = False
         else:
             self.is_root = True
@@ -242,26 +241,6 @@ class Resource(object):
             except KeyError:
                 return None
         return dictionary
-
-    # Load custom queries from config or, if no custom queries are given,
-    # load default queries and set them as properties of the resource object
-    def _load_sql(self):
-        self.get_query = self._safeget(db_obj.custom_queries,
-                                       self.db_table,'get','query')
-        self.get_id_key = self._safeget(db_obj.custom_queries,
-                                        self.db_table,'get','id_key')
-
-        # If config has no query, use the defaults
-        if self.get_query is None:
-            self.get_query = "SELECT {} FROM {}".format(
-                    ', '.join([x[0] for x in self.db_table_columns]),
-                    self.db_table
-                )
-            self.get_id_key = self.__primary_key__
-        else:
-            if self.get_id_key is None:
-                raise(ValueError("Config error: Query provided without id_key"))
-            self.log.debug("Using custom query(ies) on {}".format(self.db_table))
 
     # Given request params, keep the valid ones for the resource then
     # generate a tuple in the correct order for SQL execute()
