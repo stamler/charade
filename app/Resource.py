@@ -81,12 +81,11 @@ class Resource(object):
         resp.body = json.dumps(body, default=str)
 
 
-
     # Handle POST requests to a resource and creates a new row in the table
     # represented by the resource. This method handles incomplete fields-
     # that is to say that fields not provided will be assumed NULL in the
     # database. As a result if the database requires NOT NULL then INSERT will
-    # fail and the databse will return an error. Assumes the first column
+    # fail and the database will return an error. Assumes the first column
     # of the table in question is called 'id' and type INTEGER, which is
     # assigned automatically after INSERT and returned in the response
 
