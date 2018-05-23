@@ -4,10 +4,10 @@
 
 import falcon
 import json
-import mysql.connector
 import logging
 from database import db_obj
 from sqlalchemy.inspection import inspect
+from sqlalchemy import exc
 
 class Resource(object):
     def __init__(self, res):
@@ -107,13 +107,13 @@ class Resource(object):
             # capture the request body into data
             data = json.load(req.stream)
             if data.__class__.__name__ == 'dict':
-                self.log.debug("Single object POSTed.")
+                # Processing a single objects
                 resp.status, body = self._insert_into_db( data )
                 resp.body = json.dumps({'data':body})
             elif data.__class__.__name__ == 'list':
                 # Processing an array of objects
                 length = len(data)
-                self.log.debug("List of {} items POSTed.".format(length))
+                self.log.debug("{} items POSTed.".format(length))
                 if length > db_obj.max_multi_responses:
                     self.log.debug("Multi-response max exceeded. Batching.")
                     # INSERT all data items in one shot and give one response
@@ -144,92 +144,55 @@ class Resource(object):
                     self.log.debug("Skipped {} items missing client_id".format(skips))
                     resp.status = falcon.HTTP_207
                     resp.body = json.dumps({'data':resps})
-
             else:
                 resp.status = falcon.HTTP_500
                 resp.body = json.dumps({'errors':["Unrecognized data POSTed"]})
 
-    # SOME VALIDATION SHOULD HAPPEN HERE IN gen_insert_tuple:
-    # Given a dict of query parameters submitted to the resource, validate that
-    # they match the column type in the database and groom/convert them if
-    # possible according to standard type mappings
-    #   python datetime -> SQL datetime
-    #   string -> varchar(size)
-    #   int -> int(size) unsigned
-    #   string -> char(size)
-    # https://robertheaton.com/2014/02/09/pythons-pass-by-object-reference-as-explained-by-philip-k-dick/
-    def gen_insert_tuple(self, data):
-        # Process and validate the data into parameters for the sql_op.
-        # First we create a NULL params list of len(table columns).
-        # We then pick all of the request items whose keys match table
-        # columns and insert them into the NULL params list at the correct
-        # indices. The database will reject sql_ops if we attempt to
-        # INSERT NULL values into a column set to NOT NULL
-        params = [None] * len(self.db_table_columns[1:])
-        for k, v in data.items():
-            indices = [i for i, t in enumerate(self.db_table_columns[1:]) if k == t[0]]
-            if len(indices) == 1:
-                # There is exactly one matching key in the request.
-                # json.load ensures this by keeping only the last key:value
-                # pair it sees when loading from a source with duplicate
-                # keys so by the time we reach this point there will be
-                # either 0 or 1 elements in the indices list.
-                params[indices[0]] = v
-        return tuple(params)
+    # Validate that the given keys are in the target table
+    # then return a python obj to be used as argument for new item constructor
+    # This would be a good place for validation (Marshmallow?)
+    def gen_insert_dict(self, data):
+        col_names = [i[0] for i in self.db_table_columns]
+        values = {k: v for k, v in data.items() if k in col_names }
+        # serialize python lists and dicts to JSON in the database.
+        # Marshmallow should do this eventually
+        for k, v in values.items():
+            if (v.__class__.__name__ == 'list' or v.__class__.__name__ == 'dict'):
+                values[k] = json.dumps(v).encode()
+        return values
 
     def _insert_into_db(self, data):
-        try:
-            cnx = db_obj.get_connection()
-            cursor = cnx.cursor()
-            sql_op = "INSERT INTO {} ({}) VALUES ({})".format( self.db_table,
-                    ', '.join([x[0] for x in self.db_table_columns[1:]]),
-                    ', '.join(["%s"] * len(self.db_table_columns[1:])) )
-            response_body = {}
+        session = db_obj.get_session()
+        response_body = {}
+        if data.__class__.__name__ == 'list':
+            # Inserting multiple items (list)
+            # http://docs.sqlalchemy.org/en/latest/_modules/examples/performance/bulk_inserts.html
+            session.bulk_insert_mappings(self.sqla_obj,
+                                    [self.gen_insert_dict(d) for d in data])
+            try:
+                session.commit()
+                response_body['rowcount'] = len(data)
+                status = falcon.HTTP_201
+            except exc.SQLAlchemyError as e:
+                session.rollback()
+                response_body['error'] = "{}. Rolled back changes.".format(e)
+                status = falcon.HTTP_500
 
-            if data.__class__.__name__ == 'list':
-                insert_data = map(self.gen_insert_tuple, data)
+        else:
+            # Inserting a single item (dict)
+            item_params = self.gen_insert_dict(data)
+            item = self.sqla_obj(**item_params)
+            session.add(item)
+            try:
+                session.commit()
+                response_body['rowcount'] = 1
+                response_body['id'] = item.id
+                status = falcon.HTTP_201
+            except exc.SQLAlchemyError as e:
+                response_body['error'] = "{}. Rolled back changes.".format(e)
+                status = falcon.HTTP_500
 
-                cnx.start_transaction()
-                cursor.executemany(sql_op, insert_data)
-                self.log.debug("Affected rows count: {}".format(cursor.rowcount))
-                if cursor.rowcount == len(data):
-                    response_body['rowcount'] = cursor.rowcount
-                    status = falcon.HTTP_201
-                    cnx.commit()
-                    self.log.debug("response body: {}".format(response_body))
-                else:
-                    error = ("Row count ({}) doesn't match data length ({}). "
-                             "Rolled back.".format(cursor.rowcount, len(data)))
-                    response_body['error'] = error
-                    status = falcon.HTTP_500
-                    cnx.rollback()
-                    self.log.debug("response body: {}".format(response_body))
-            else:
-                params = self.gen_insert_tuple(data)
-                sql_op += "; SELECT LAST_INSERT_ID()"
-
-                # Execute the sql_op (insert the new record and get the row id)
-                # There will be multiple results
-                for result in cursor.execute(sql_op, params, multi=True):
-                    if result.with_rows:
-                        # Get id of the created resource from LAST_INSERT_ID()
-                        # It's the first element of the tuple in the only row.
-                        response_body['id'] = result.fetchall()[0][0]
-                    else:
-                        # The number of affected rows should be exactly 1
-                        if result.rowcount == 1:
-                            status = falcon.HTTP_201
-                            response_body['rowcount'] = result.rowcount
-                        else:
-                            status = falcon.HTTP_500
-                cnx.commit()
-
-            cursor.close()
-            return status, response_body
-
-        except mysql.connector.Error as e:
-            return (falcon.HTTP_500,
-                            str(cursor.statement) + " ERROR: {}".format(e) )
+        return status, response_body
 
     # get the value of nested keys in a dictionary.
     # If any of the keys doesn't exist return None.
