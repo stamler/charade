@@ -44,10 +44,6 @@ class Database(object):
         # Load resources once and cache them
         self.resources = self.__get_resources()
 
-        # PENDING_DELETION Vestigial code (2 lines) to be deleted after transition to SQLAlchemy
-        self.__cnx = mysql.connector.connect(**self.dbconfig)
-        self.__cnx.set_converter_class(CustomMySQLConverter)
-
     # PENDING_DELETION Vestigial method to be deleted with SQLAlchemy functionality
     def get_connection(self):
         return self.__cnx
@@ -107,16 +103,5 @@ class Database(object):
     # Convert snake_case to CamelCase
     def snake_to_camel(self, the_input):
         return ''.join(w.capitalize() for w in (the_input.rsplit('_')))
-
-# PENDING_DELETION This class will become Vestigial after full SQLAlchemy transition
-class CustomMySQLConverter(mysql.connector.conversion.MySQLConverter):
-    """ A mysql.connector Converter that handles List and Dict type
-    and spits out bytes as json """
-
-    def _list_to_mysql(self, value):
-        return json.dumps(value).encode()
-
-    def _dict_to_mysql(self, value):
-        return json.dumps(value).encode()
 
 db_obj = Database(config.config)
