@@ -7,17 +7,30 @@ import time
 import config
 import requests
 import logging
+from database import db_obj
 from cryptography.x509 import load_pem_x509_certificate as load_cert
 from cryptography.hazmat.backends import default_backend
 
+
+# The Authentication and Authorization section of the app.
+# Load keys from Microsoft and cache them for refresh_interval before reloading
+# If there is no token, only OPTIONS requests will be served
+# AUTHENTICATION
+#   If there is a token, confirm it is valid (signed by Microsoft AzureAD)
+#   If the token is valid, confirm it is for this tenant
+# AUTHORIZATION
+#   If the token is for this tenant, load user's permissions (from Roles?)
+#   If the request is not within these permissions deny it, otherwise serve response
+# AzureAD Token Reference is available here:
+# https://docs.microsoft.com/en-us/azure/active-directory/develop/active-directory-token-and-claims
 class AzureADTokenValidator(object):
     def __init__(self,tenant_name,app_id,refresh_interval=3600):
         self.app_id = app_id
         self.tenant_name = tenant_name
-        self.log = logging.getLogger()
+        self.log = logging.getLogger(__name__)
         self.log.addHandler(logging.NullHandler())
 
-        # Don't validate OPTIONS requests for preflighting
+        # These requests are permitted regardless of the token
         self.exempt_methods = ['OPTIONS']
 
         # Time in seconds to keep cached keys from Microsoft
@@ -30,17 +43,23 @@ class AzureADTokenValidator(object):
     def _load_certificates(self):
         self.last_refresh = int(time.time())
         res = requests.get('https://login.microsoftonline.com/' +
-                           self.tenant_name + '/.well-known/openid-configuration')
+                    self.tenant_name + '/.well-known/openid-configuration')
         res = requests.get(res.json()['jwks_uri'])
         self.keys = {}
         for key in res.json()['keys']:
             x5c = key['x5c']
             cert = ''.join([ '-----BEGIN CERTIFICATE-----\n', x5c[0],
                                             '\n-----END CERTIFICATE-----\n' ])
-            public_key = load_cert(cert.encode(), default_backend()).public_key()
+            public_key = load_cert(cert.encode(),
+                                   default_backend()).public_key()
             self.keys[key['kid']] = public_key
 
-    def validate_token(self, access_token):
+    # Return decoded token claims if valid. Otherwise raise exception
+    def authenticate(self, auth_header):
+        if (auth_header):
+            access_token = auth_header.partition('Bearer ')[2]
+        else:
+            raise falcon.HTTPUnauthorized("No authorization header provided.")
 
         # reload the keys if they're stale
         if (int(time.time()) - self.last_refresh > self.key_refresh_interval):
@@ -52,54 +71,62 @@ class AzureADTokenValidator(object):
             if (token_header['kid'] in self.keys):
                 public_key = self.keys[token_header['kid']]
 
-                # The key id is one we have, continue the validation
-                # Validate the token against the public_key and the app_id. If it
-                # decodes here then we can respect the claims it contains
+                # validate the token against the public_key and the app_id
                 try:
                     decoded = jwt.decode(access_token, public_key,
                                          algorithms = token_header['alg'],
                                            audience = self.app_id)
-                    expiry = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(decoded['exp']))
+                                        # should validate issuer, nonce,
+                                        # audience, nbf, etc..
+                    expiry = time.strftime('%Y-%m-%d %H:%M:%S',
+                                                time.localtime(decoded['exp']))
                     self.log.debug("Token is valid until {}".format(expiry))
                     return decoded
-                except Exception as e:
-                    self.log.warning('Token failed validation {}'.format(e))
-                    raise falcon.HTTPUnauthorized('Authentication Required',
-                                    'Provided token is not valid.', None)
+                except jwt.InvalidTokenError as e:
+                    raise falcon.HTTPUnauthorized("Provided token is invalid: {}".format(e))
             else:
-                # The key in the token_header is not in our list of valid keys
-                # There's no way to validate the token so deny access
-                self.log.debug('Provided token is signed by an unrecognized authority')
-                raise falcon.HTTPUnauthorized('Authentication Required',
-                                'Provided token is signed by an unrecognized authority.', None)
+                raise falcon.HTTPUnauthorized("Provided token signed by an "
+                                              "unrecognized authority.")
         else:
-            # No token provided, deny access
-            self.log.debug('No token provided, denying access')
-            raise falcon.HTTPUnauthorized('Authentication Required',
-                            'Please provide a valid token.', None)
+            raise falcon.HTTPUnauthorized("No token provided.")
 
-    def process_resource(self, req, resp, resource, params):
-        #self.log.debug("request: {}".format(req))
-        self.log.debug("request.headers: {}".format(req.headers))
+    # Raise an exception if the authenticated token doesn't
+    # have privileges for the requested resource.
+    def authorize(self, claims, req):
+        method, uri = req.method, req.uri
+        session = db_obj.get_session()
 
-        if( req.method in self.exempt_methods):
+        # Get the user from claims
+        user = session.query(db_obj.resources['Users']['sqla_obj']).filter_by(work_email=claims['upn'])
+
+        if (user is not None):
+            # user is in the database, load their roles
+            #   for each role in roles look for the uri
+            #       if the uri is found look for the method
+            #           if the method is found
+            #               return
+            #   raise falcon.HTTPForbidden("user doesn't have permission")
+            return
+        else:
+            raise falcon.HTTPForbidden("Unrecognized user")
+
+    def process_request(self, req, resp):
+        # This is necessary because CORS plugin isn't activated in exception situation
+        #resp.set_header('Access-Control-Allow-Origin', '*')
+
+        self.log.debug("Headers: {}".format(req.headers))
+
+        if (req.method in self.exempt_methods):
             return
 
-        #BYPASS AUTH FOR POST to RawLogins ***TEMPORARY FOR TESTING****
-        if( req.method == 'POST' and req.path == '/RawLogins'):
-            return
+        auth_header = req.get_header('Authorization')
 
-        if (req.get_header('Authorization')):
-            token = req.get_header('Authorization').partition('Bearer ')[2]
-            claims = self.validate_token(token)
-        else:
-            raise falcon.HTTPUnauthorized('Authentication Required',
-                            'Please provide a valid token.', None)
+        # This will raise falcon.HTTPUnauthorized if it fails
+        claims = self.authenticate(auth_header)
 
-        # Do anything we need to do with the claims
-        #params['jwt_claims'] = {}
-        #for claim in claims:
-        #    params['jwt_claims'][claim] = claims[claim]
+        # This will raise falcon.HTTPForbidden if it fails
+        self.authorize(claims, req)
+
 
 class CORSComponent(object):
     def process_response(self, req, resp, resource, req_succeeded):

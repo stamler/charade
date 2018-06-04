@@ -6,6 +6,7 @@ import os.path
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 from sqlalchemy.ext.automap import automap_base
+from sqlalchemy.exc import DatabaseError
 
 class Database(object):
 
@@ -37,9 +38,13 @@ class Database(object):
                 self.dbconfig['user'], self.dbconfig['password'],
                 self.dbconfig['host'], self.dbconfig['database']
             )
-        engine = create_engine(connection_string)
-        self.Base.prepare(engine, reflect=True, classname_for_table=self.custom_classname)
-        self.session = Session(engine)
+        engine = create_engine(connection_string, pool_pre_ping=True)
+        try:
+            self.Base.prepare(engine, reflect=True, classname_for_table=self.custom_classname)
+            self.session = Session(engine)
+        except DatabaseError as e:
+            self.log.error("No Database Connection: {}".format(e))
+            # TODO: Handle this exception safely. Perhaps restart the server?
 
         # Load resources once and cache them
         self.resources = self.__get_resources()

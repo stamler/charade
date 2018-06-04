@@ -20,7 +20,7 @@ cors = CORSComponent()
 cache_controller = CacheController()
 
 # Create the falcon API instance (a WSGI app)
-app = falcon.API(middleware = [ cors, cache_controller ]) #validator ])
+app = falcon.API(middleware = [ cors, validator, cache_controller ])
 
 # instantiate resources, hook up routes and store references to them in db_obj
 for _, resource in db_obj.resources.items():

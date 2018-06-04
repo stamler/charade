@@ -20,6 +20,7 @@ docker run -v /path/to/app:/app -p 9090:9090 charade
 
 ### TODO
 
+-
 - Write tests for the AzureADTokenValidator
 - Make root return app-loading stuff for Vue.js and nothing more
 - Make JSON api return errors formatted at JSON
