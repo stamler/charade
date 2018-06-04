@@ -49,10 +49,6 @@ class Database(object):
         # Load resources once and cache them
         self.resources = self.__get_resources()
 
-    # PENDING_DELETION Vestigial method to be deleted with SQLAlchemy functionality
-    def get_connection(self):
-        return self.__cnx
-
     def get_session(self):
         return self.session
 
