@@ -8,6 +8,7 @@ import logging
 from database import db_obj
 from sqlalchemy.inspection import inspect
 from sqlalchemy import exc
+from sqlalchemy import orm
 
 class Resource(object):
     def __init__(self, res):
@@ -27,13 +28,12 @@ class Resource(object):
 
 
     # Handle GET requests to a resource that represents all rows of a single
-    # table in the database. If the request contains an id field expression
+    # table in the database. If the request contains an id "field expression"
     # then return a single object.
     # ASSUME col 0 of the table in question is called 'id' and type INTEGER
     def on_get(self, req, resp, id=None):
         if self.is_root:
             resp.status = falcon.HTTP_200
-            resp.content_type = falcon.MEDIA_HTML
             body = { 'data': db_obj.resources }
             resp.body = json.dumps(body, default=str)
             return
@@ -79,6 +79,43 @@ class Resource(object):
             body = { "errors":["Something went south."]}
 
         resp.body = json.dumps(body, default=str)
+
+    def on_delete(self, req, resp, id):
+        if self.is_root or id is None:
+            resp.status = falcon.HTTP_405
+            body = { 'errors': ['Cannot delete this resource'] }
+            resp.body = json.dumps(body, default=str)
+            return
+
+        session = db_obj.get_session()
+
+        # Delete the item with given id
+        try:
+            # session.query(self.sqla_obj).filter(id=id).delete() ?
+            item = session.query(self.sqla_obj).filter_by(id=id).one()
+            session.delete(item)
+        except orm.exc.NoResultFound as e:
+            resp.status = falcon.HTTP_404
+            body = { 'errors': ["Cannot find this resource"] }
+            resp.body = json.dumps(body, default=str)
+            return
+        except orm.exc.MultipleResultsFound as e:
+            resp.status = falcon.HTTP_500
+            body = { 'errors': ["Multiple resources with id: {}. {}".format(id, e)] }
+            resp.body = json.dumps(body, default=str)
+            return
+
+        # commit
+        try:
+            session.commit()
+            resp.status = falcon.HTTP_200
+            body = { 'data': "Deleted item from {} with id {}".format(self.name,id) }
+            resp.body = json.dumps(body, default=str)
+        except exc.SQLAlchemyError as e:
+            session.rollback()
+            resp.status = falcon.HTTP_500
+            body = { 'errors': ["Found id {} but commit failed. {}".format(id, e)] }
+            resp.body = json.dumps(body, default=str)
 
 
     # Handle POST requests to a resource and creates a new row in the table
@@ -175,7 +212,7 @@ class Resource(object):
                 status = falcon.HTTP_201
             except exc.SQLAlchemyError as e:
                 session.rollback()
-                response_body['error'] = "{}. Rolled back changes.".format(e)
+                response_body['errors'] = ["{}. Rolled back changes.".format(e)]
                 status = falcon.HTTP_500
 
         else:
@@ -189,7 +226,7 @@ class Resource(object):
                 response_body['id'] = item.id
                 status = falcon.HTTP_201
             except exc.SQLAlchemyError as e:
-                response_body['error'] = "{}. Rolled back changes.".format(e)
+                response_body['errors'] = ["{}. Rolled back changes.".format(e)]
                 status = falcon.HTTP_500
 
         return status, response_body
