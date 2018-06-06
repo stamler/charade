@@ -16,10 +16,12 @@ class Resource(object):
         self.sqla_obj = res.get('sqla_obj', None)
         if (self.sqla_obj):
             self.name = self.sqla_obj.__name__
-            self.__primary_key__ = [k.name for k in inspect(self.sqla_obj).primary_key][0]
+            self.__primary_key__ = [k.name for k in inspect(
+                                            self.sqla_obj).primary_key][0]
             self.db_table = self.sqla_obj.__table__.name
             # list of tuples (column_name, column_type)
-            self.db_table_columns = [(c.name, c.type) for c in inspect(self.sqla_obj).columns]
+            self.db_table_columns = [(c.name, c.type) for c in inspect(
+                                            self.sqla_obj).columns]
             self.is_root = False
         else:
             self.is_root = True
@@ -80,7 +82,7 @@ class Resource(object):
 
         resp.body = json.dumps(body, default=str)
 
-    def on_delete(self, req, resp, id):
+    def on_delete(self, req, resp, id=None):
         if self.is_root or id is None:
             resp.status = falcon.HTTP_405
             body = { 'errors': ['Cannot delete this resource'] }
@@ -89,32 +91,31 @@ class Resource(object):
 
         session = db_obj.get_session()
 
-        # Delete the item with given id
         try:
-            # session.query(self.sqla_obj).filter(id=id).delete() ?
+            # Delete the item with given id
             item = session.query(self.sqla_obj).filter_by(id=id).one()
             session.delete(item)
+            session.commit()
+            resp.status = falcon.HTTP_200
+            body = { 'data': "Deleted item from {} with id {}".format(
+                                                        self.name,id) }
+            resp.body = json.dumps(body, default=str)
         except orm.exc.NoResultFound as e:
             resp.status = falcon.HTTP_404
-            body = { 'errors': ["Cannot find this resource"] }
+            body = { 'errors': ["{} has no item with id {}".format(
+                                                        self.name, id)] }
             resp.body = json.dumps(body, default=str)
             return
         except orm.exc.MultipleResultsFound as e:
             resp.status = falcon.HTTP_500
-            body = { 'errors': ["Multiple resources with id: {}. {}".format(id, e)] }
+            body = { 'errors': ["{} has multiple items with id: {}. {}".format(
+                                                        self.name, id, e)] }
             resp.body = json.dumps(body, default=str)
             return
-
-        # commit
-        try:
-            session.commit()
-            resp.status = falcon.HTTP_200
-            body = { 'data': "Deleted item from {} with id {}".format(self.name,id) }
-            resp.body = json.dumps(body, default=str)
         except exc.SQLAlchemyError as e:
             session.rollback()
             resp.status = falcon.HTTP_500
-            body = { 'errors': ["Found id {} but commit failed. {}".format(id, e)] }
+            body = { 'errors': [e] }
             resp.body = json.dumps(body, default=str)
 
 
