@@ -1,4 +1,5 @@
 # charade
+
 A Simultaneous Translator for mysql and JSON
 
 MIT License
@@ -9,18 +10,20 @@ Charade is a Python WSGI application that connects to a mysql database, loads th
 
 Charade is built, tested, and deployed inside a Docker container.
 
-### Installation
+## Installation
+
 1. Set mysql and AzureAD environment variables in Dockerfile
 2. cd /path/to/charade
 3. [optional] edit config.py
-3. docker build -t charade .
+4. docker build -t charade .
 
-### Run
+## Run
+
 docker run -v /path/to/app:/app -p 9090:9090 charade
 
-### TODO
+## TODO
 
--
+- Let's Encrypt integration in the docker container
 - Write tests for the AzureADTokenValidator
 - Make root return app-loading stuff for Vue.js and nothing more
 - Make JSON api return errors formatted at JSON
@@ -30,7 +33,7 @@ docker run -v /path/to/app:/app -p 9090:9090 charade
 - Clean up the code and make it generic for deployment
 - Build in ability to run against other databases like SQLite, PostgreSQL, or Redshift
 
-### Roadmap
+## Roadmap
 
 - Foreign Key Handling:
   1-to-N relationship behaviour (SoftwareTitles to SoftwareKeys):
@@ -48,8 +51,9 @@ docker run -v /path/to/app:/app -p 9090:9090 charade
   with no Foreign keys, build a many-to-many relationship endpoint:
       i.e. /TableA/{id}/TableB
 
-### API
-```
+## API
+
+```http
 GET       /table_names
 GET       /table_names/id
 POST      /table_names
@@ -61,7 +65,8 @@ POST      /synth_resources
 PUT/PATCH /synth_resources/123
 ```
 
-### REST functionality
+## REST functionality
+
 - Access Control including restriction to users on a specific Azure AD tenant perhaps based on a users table
 - Validation of received values against column_type and translation as need (such as datetime)
 - Make the code clearer for table, column and type access, perhaps using named tuples
