@@ -53,8 +53,24 @@ class Database(object):
         return self.session
 
     # Read the database and load in table and column names, EXCLUDING VIEWS.
-    #NB previous version without SQLALchemy included VIEWS
+    # NB previous version without SQLALchemy included VIEWS
     # This info is used to generate resource objects and routes
+    # A useful addition to this would be to generate schemas for each Resource
+    # These schemas would then be sent to the client when the app is loaded
+    # so that when the user creates a new resource object it can be validated
+    # in the client prior to POSTing or PUTing to save a round trip
+    # The client UI could also go a step further and present different input
+    # types based on the schema provided by this API. The format of this
+    # schema should be something like http://json-schema.org 
+
+    # Ideally Marshmallow https://marshmallow-sqlalchemy.readthedocs.io
+    # or a similar package could validate the input once it had been POSTed or
+    # PUT on the server. But there should be only one place to actually 
+    # configure the schema for all of charade and this should probably be the 
+    # SQLAlchemy model. Then the marshmallow schema would be based on that and 
+    # the generation of a JSON Schema would also follow from that to the client.
+    # In this way modifications to the backend would drive automatic 
+    # modifications to the client.
     def __get_resources(self):
         # describe the root resource
         resources = { "Root": { "Title_Case": "Root", "CamelCase": "Root",
