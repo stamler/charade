@@ -3,6 +3,7 @@ import logging
 import config
 from os import path
 from sqlalchemy import create_engine
+from sqlalchemy.inspection import inspect
 from sqlalchemy.orm import Session
 from sqlalchemy.ext.automap import automap_base
 from sqlalchemy.exc import DatabaseError
@@ -81,19 +82,39 @@ class Database(object):
             if subclass.__table__.name in self.appconfig["tables_to_exclude"]:
                 continue
 
-            snake_case = self.strip_prefix(subclass.__table__.name)
+            # Build a schema for each table so the UI knows how to make forms
+            schema = {}
+            for c in inspect(subclass).columns:
+                schema[c.name] = self.__sqla_to_json_type(c.type)
+            
+            # create baseURI plus URI with field expression for {id}
             uri_base = '/' + subclass.__name__
             # Create 2nd URI with the field expression for {id}
             uri_id = uri_base + r"/{id:int(min=0)}"
 
             resources[subclass.__name__] = {}
-            resources[subclass.__name__]['Title_Case'] = self.snake_to_title(snake_case)
-            resources[subclass.__name__]['json_schema'] = None
+            resources[subclass.__name__]['schema'] = schema
             resources[subclass.__name__]['URIs'] = [uri_base, uri_id]
             resources[subclass.__name__]['object'] = None
             resources[subclass.__name__]['sqla_obj'] = subclass
 
         return resources
+
+    def __sqla_to_json_type(self, sqla_type):
+        # 6 primitive types:
+        # array, boolean, object, string, null, number
+
+        conversion = {
+            "int":"number",
+            "str":"string",
+            "datetime":"string",
+            "date":"string"
+        }
+
+        # conversion[c.type.python_type.__name__]
+
+        json_type = str(sqla_type)
+        return json_type
 
     # custom class names
     def custom_classname(self, base, tablename, table):
