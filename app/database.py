@@ -73,10 +73,9 @@ class Database(object):
     # modifications to the client.
     def __get_resources(self):
         # describe the root resource
-        resources = { "Root": { "Title_Case": "Root", "CamelCase": "Root",
-                                "snake_case": "root", "table": None,
-                                "URIs":["/"], "object":None
-                                 }}
+        resources = { "Root": { "Title_Case": "Root", "URIs":["/"], 
+                                "object":None, "sqla_obj":None
+                                }}
 
         self.table_columns = {}
 
@@ -96,9 +95,10 @@ class Database(object):
 
             resources[camel_case] = {}
             resources[camel_case]['Title_Case'] = self.snake_to_title(snake_case)
-            resources[camel_case]['CamelCase'] = camel_case
-            resources[camel_case]['snake_case'] = snake_case
-            resources[camel_case]['table'] = subclass.__table__.name
+            #resources[camel_case]['CamelCase'] = camel_case
+            #resources[camel_case]['snake_case'] = snake_case
+            #resources[camel_case]['table'] = subclass.__table__.name
+            resources[camel_case]['json_schema'] = None
             resources[camel_case]['URIs'] = [uri_base, uri_id]
             resources[camel_case]['object'] = None
             resources[camel_case]['sqla_obj'] = subclass
