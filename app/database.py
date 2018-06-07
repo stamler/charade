@@ -80,9 +80,6 @@ class Database(object):
         #self.table_columns = {}
 
         for subclass in self.Base.__subclasses__():
-            # dict key is table_name, value is list of
-            # tuples of format (column_name, column_type)
-            #self.table_columns[subclass.__table__.name] = [(c.name, c.type) for c in subclass.__table__.columns]
 
             if subclass.__table__.name in self.appconfig["tables_to_exclude"]:
                 continue
@@ -95,9 +92,6 @@ class Database(object):
 
             resources[camel_case] = {}
             resources[camel_case]['Title_Case'] = self.snake_to_title(snake_case)
-            #resources[camel_case]['CamelCase'] = camel_case
-            #resources[camel_case]['snake_case'] = snake_case
-            #resources[camel_case]['table'] = subclass.__table__.name
             resources[camel_case]['json_schema'] = None
             resources[camel_case]['URIs'] = [uri_base, uri_id]
             resources[camel_case]['object'] = None
