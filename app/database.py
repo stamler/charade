@@ -73,9 +73,7 @@ class Database(object):
     # modifications to the client.
     def __get_resources(self):
         # describe the root resource
-        resources = { "Root": { "Title_Case": "Root", "URIs":["/"], 
-                                "object":None, "sqla_obj":None
-                                }}
+        resources = { "Root": { "URIs":["/"], "sqla_obj":None }}
 
         for subclass in self.Base.__subclasses__():
 
@@ -94,7 +92,6 @@ class Database(object):
             resources[subclass.__name__] = {}            
             resources[subclass.__name__]['schema'] = schema
             resources[subclass.__name__]['URIs'] = [uri_base, uri_id]
-            resources[subclass.__name__]['object'] = None
             resources[subclass.__name__]['sqla_obj'] = subclass
 
         return resources

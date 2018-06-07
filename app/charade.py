@@ -23,7 +23,7 @@ cache_controller = CacheController()
 app = falcon.API(middleware = [ cors, validator, cache_controller ])
 
 # instantiate resources, hook up routes and store references to them in db_obj
-for _, resource in db_obj.resources.items():
-    resource['object'] = Resource(resource)
-    for uri in resource['URIs']:
-        app.add_route(uri, resource['object'])
+for _, res_config in db_obj.resources.items():
+    resource = Resource(res_config)
+    for uri in res_config['URIs']:
+        app.add_route(uri, resource)
