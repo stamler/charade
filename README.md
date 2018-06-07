@@ -54,15 +54,11 @@ docker run -v /path/to/app:/app -p 9090:9090 charade
 ## API
 
 ```http
-GET       /table_names
-GET       /table_names/id
-POST      /table_names
-PUT/PATCH /table_names/123
-
-GET       /synth_resources
-GET       /synth_resources/123
-POST      /synth_resources
-PUT/PATCH /synth_resources/123
+GET       /Resources
+GET       /Resources/id
+POST      /Resources
+PUT/PATCH /Resources/id
+DELETE    /Resources/id
 ```
 
 ## REST functionality
