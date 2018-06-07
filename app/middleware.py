@@ -111,7 +111,7 @@ class AzureADTokenValidator(object):
             raise falcon.HTTPForbidden("Unrecognized user")
 
     def process_request(self, req, resp):
-        # This is necessary because CORS plugin isn't activated in exception situation
+        # Next line necessary because CORS plugin isn't activated in exception situation
         #resp.set_header('Access-Control-Allow-Origin', '*')
 
         self.log.debug("Headers: {}".format(req.headers))
@@ -156,4 +156,4 @@ class CacheController(object):
     def process_response(self, req, resp, resource, req_succeeded):
         safe_methods = ['GET', 'OPTIONS', 'HEAD']
         if (req_succeeded and req.method in safe_methods):
-            resp.cache_control = ['max-age=60']
+            resp.cache_control = ['max-age=10']
