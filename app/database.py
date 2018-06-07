@@ -85,17 +85,16 @@ class Database(object):
                 continue
 
             snake_case = self.strip_prefix(subclass.__table__.name)
-            camel_case = subclass.__name__
-            uri_base = '/' + camel_case
+            uri_base = '/' + subclass.__name__
             # Create 2nd URI with the field expression for {id}
             uri_id = uri_base + r"/{id:int(min=0)}"
 
-            resources[camel_case] = {}
-            resources[camel_case]['Title_Case'] = self.snake_to_title(snake_case)
-            resources[camel_case]['json_schema'] = None
-            resources[camel_case]['URIs'] = [uri_base, uri_id]
-            resources[camel_case]['object'] = None
-            resources[camel_case]['sqla_obj'] = subclass
+            resources[subclass.__name__] = {}
+            resources[subclass.__name__]['Title_Case'] = self.snake_to_title(snake_case)
+            resources[subclass.__name__]['json_schema'] = None
+            resources[subclass.__name__]['URIs'] = [uri_base, uri_id]
+            resources[subclass.__name__]['object'] = None
+            resources[subclass.__name__]['sqla_obj'] = subclass
 
         return resources
 
