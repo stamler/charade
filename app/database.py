@@ -77,12 +77,12 @@ class Database(object):
                                 "object":None, "sqla_obj":None
                                 }}
 
-        self.table_columns = {}
+        #self.table_columns = {}
 
         for subclass in self.Base.__subclasses__():
             # dict key is table_name, value is list of
             # tuples of format (column_name, column_type)
-            self.table_columns[subclass.__table__.name] = [(c.name, c.type) for c in subclass.__table__.columns]
+            #self.table_columns[subclass.__table__.name] = [(c.name, c.type) for c in subclass.__table__.columns]
 
             if subclass.__table__.name in self.appconfig["tables_to_exclude"]:
                 continue
