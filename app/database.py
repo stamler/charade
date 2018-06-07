@@ -81,7 +81,7 @@ class Database(object):
 
             if subclass.__table__.name in self.appconfig["tables_to_exclude"]:
                 continue
-
+            
             # Build a schema for each table so the UI knows how to make forms
             schema = {}
             for c in inspect(subclass).columns:
@@ -89,10 +89,9 @@ class Database(object):
             
             # create baseURI plus URI with field expression for {id}
             uri_base = '/' + subclass.__name__
-            # Create 2nd URI with the field expression for {id}
             uri_id = uri_base + r"/{id:int(min=0)}"
 
-            resources[subclass.__name__] = {}
+            resources[subclass.__name__] = {}            
             resources[subclass.__name__]['schema'] = schema
             resources[subclass.__name__]['URIs'] = [uri_base, uri_id]
             resources[subclass.__name__]['object'] = None
@@ -123,10 +122,6 @@ class Database(object):
     # Remove the tables_prefix
     def strip_prefix(self, the_input):
         return the_input.replace(self.appconfig['tables_prefix'],"")
-
-    # Convert snake_case to Human Readable (Title Case)
-    def snake_to_title(self, the_input):
-        return ' '.join(w.capitalize() for w in (the_input.rsplit('_')))
 
     # Convert snake_case to CamelCase
     def snake_to_camel(self, the_input):
