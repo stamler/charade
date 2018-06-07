@@ -19,9 +19,6 @@ class Resource(object):
             self.__primary_key__ = [k.name for k in inspect(
                                             self.sqla_obj).primary_key][0]
             self.db_table = self.sqla_obj.__table__.name
-            # list of tuples (column_name, column_type)
-            self.db_table_columns = [(c.name, c.type) for c in inspect(
-                                            self.sqla_obj).columns]
             self.is_root = False
         else:
             self.is_root = True
@@ -140,6 +137,12 @@ class Resource(object):
     # https://apihandyman.io/api-design-tips-and-tricks-getting-creating-updating-or-deleting-multiple-resources-in-one-api-call/#single-and-multiple-creations-with-the-same-endpoint
 
     def on_post(self, req, resp):
+        if self.is_root:
+            resp.status = falcon.HTTP_405
+            body = { 'errors': ['Cannot create resources here'] }
+            resp.body = json.dumps(body, default=str)
+            return
+
         # Prevent blocking condition by ensuring content_length > 0
         if req.content_length:
             # capture the request body into data
@@ -190,7 +193,7 @@ class Resource(object):
     # then return a python obj to be used as argument for new item constructor
     # This would be a good place for validation (Marshmallow?)
     def gen_insert_dict(self, data):
-        col_names = [i[0] for i in self.db_table_columns]
+        col_names = [c.name for c in inspect(self.sqla_obj).columns]
         values = {k: v for k, v in data.items() if k in col_names }
         # serialize python lists and dicts to JSON in the database.
         # Marshmallow should do this eventually
