@@ -1,8 +1,7 @@
 import mysql.connector
-import json
 import logging
 import config
-import os.path
+from os import path
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 from sqlalchemy.ext.automap import automap_base
@@ -29,7 +28,7 @@ class Database(object):
         # If we're running inside docker, update the mysql host to
         # the docker host for tunnelling (expect the host is tunneling)
         # this will become more fine-grained later with an ENV in Dockerfile
-        if os.path.isfile('/app/isContainerized'):
+        if path.isfile('/app/isContainerized'):
             self.log.debug("App detected it is running in a container")
             self.dbconfig['host'] = "host.docker.internal"
 
@@ -76,8 +75,6 @@ class Database(object):
         resources = { "Root": { "Title_Case": "Root", "URIs":["/"], 
                                 "object":None, "sqla_obj":None
                                 }}
-
-        #self.table_columns = {}
 
         for subclass in self.Base.__subclasses__():
 
