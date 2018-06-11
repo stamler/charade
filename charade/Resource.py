@@ -203,7 +203,7 @@ class Resource(object):
         # serialize python lists and dicts to JSON in the database.
         # Marshmallow should do this eventually
         for k, v in values.items():
-            if (v.__class__.__name__ == 'list' or v.__class__.__name__ == 'dict'):
+            if (v.__class__.__name__ in ['list', 'dict']):
                 values[k] = json.dumps(v).encode()
         return values
 
