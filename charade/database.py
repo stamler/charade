@@ -1,8 +1,8 @@
 import mysql.connector
 import logging
-from .config import config
+from .config import config as global_configuration
 from os import path
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, MetaData
 from sqlalchemy.inspection import inspect
 from sqlalchemy.orm import Session
 from sqlalchemy.ext.automap import automap_base
@@ -10,7 +10,7 @@ from sqlalchemy.exc import DatabaseError
 
 class Database(object):
 
-    def __init__(self, config_dict):
+    def __init__(self, config):
         # Configure logging
         self.log = logging.getLogger()
         self.log.setLevel(logging.DEBUG)
@@ -19,28 +19,30 @@ class Database(object):
         self.log.addHandler(ch)
         self.log.debug("__init__ Database")
 
-        # Configuration-related initialization
-        self.dbconfig = config_dict['mysql']
-        self.appconfig = config_dict['app']
-
         # PENDING_DELETION These 2 lines may become Vestigial after full SQLAlchemy transition
-        self.max_multi_responses = self.appconfig.get('max_multi_responses', 5)
+        self.max_multi_responses = config.get('max_multi_responses', 5)
 
-        # If we're running inside docker, update the mysql host to
-        # the docker host for tunnelling (expect the host is tunneling)
-        # this will become more fine-grained later with an ENV in Dockerfile
+        # If we're running inside docker on a mac, we can access the outside
+        # world using host.docker.internal
         if path.isfile('/app/isContainerized'):
-            self.log.debug("App detected it is running in a container")
-            self.dbconfig['host'] = "host.docker.internal"
+            self.log.debug("App detected it is running in a container "
+                        "DB connection may fail due to networking.\n"
+                        "If running Docker for Mac, try host.docker.internal")
 
-        self.Base = automap_base()
-        connection_string = "mysql+mysqlconnector://{}:{}@{}/{}".format(
-                self.dbconfig['user'], self.dbconfig['password'],
-                self.dbconfig['host'], self.dbconfig['database']
-            )
-        engine = create_engine(connection_string, pool_pre_ping=True)
+        engine = create_engine(config['db'], pool_pre_ping=True)
         try:
-            self.Base.prepare(engine, reflect=True, classname_for_table=self.custom_classname)
+            # produce our own MetaData object
+            metadata = MetaData()
+
+            # reflect the entire database
+            # optionally use 'only' to limit reflected tables
+            only = config.get('tables_to_include', None)
+            metadata.reflect(engine, only=None)
+
+            # we can then produce a set of mappings from this MetaData.
+            self.Base = automap_base(metadata=metadata)
+
+            self.Base.prepare(classname_for_table=self.custom_classname)
             self.session = Session(engine)
         except DatabaseError as e:
             self.log.error("No Database Connection: {}".format(e))
@@ -76,9 +78,6 @@ class Database(object):
         resources = { "Root": { "URIs":["/"], "sqla_obj":None }}
 
         for subclass in self.Base.__subclasses__():
-
-            if subclass.__table__.name in self.appconfig["tables_to_exclude"]:
-                continue
             
             # Build a schema for each table so the UI knows how to make forms
             schema = {}
@@ -118,10 +117,10 @@ class Database(object):
 
     # Remove the tables_prefix
     def strip_prefix(self, the_input):
-        return the_input.replace(self.appconfig['tables_prefix'],"")
+        return the_input.replace(global_configuration['tables_prefix'],"")
 
     # Convert snake_case to CamelCase
     def snake_to_camel(self, the_input):
         return ''.join(w.capitalize() for w in (the_input.rsplit('_')))
 
-db_obj = Database(config)
+db_obj = Database(global_configuration)

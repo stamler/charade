@@ -1,21 +1,14 @@
 # This file should be renamed config.py and real values populated
 
 config = {
-  "mysql":{
-    "database": "database_name",
-    "user":     "database_username",
-    "password": "database_password",
-    "host":     "db.company.ca",
-    "port":     3306
-  },
+  # SQLAlchemy connection string
+  "db": "dialect+driver://username:password@host:port/database"
+  "tables_prefix": "prefix_",
+  "max_multi_responses":3,
+  # If defined, only reflect these tables
+  # "tables_to_include": [table1, table2],
   "azure_ad":{
     "tenant_name":"tenant.onmicrosoft.com",
     "app_id":"https://company.ca/187man2a-edg9-1d3f-b87c-j989a20baaa0"
-  },
-  "app":{
-    "max_multi_responses":5,
-    "tables_prefix": "company_",
-    # A list of table names (strings) as they appear in the database
-    "tables_to_exclude": ["company_table_with_custom_resource"],
   }
 }
