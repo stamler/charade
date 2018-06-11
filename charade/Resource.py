@@ -5,7 +5,7 @@
 import falcon
 import json
 import logging
-from database import db_obj
+from .database import db_obj
 from sqlalchemy.inspection import inspect
 from sqlalchemy import exc
 from sqlalchemy import orm

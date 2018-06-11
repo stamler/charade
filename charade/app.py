@@ -3,19 +3,19 @@
 # Called by WSGI to run the falcon app, the entry point
 
 import os
-os.chdir(os.path.dirname(os.path.realpath(__file__)))
+#os.chdir(os.path.dirname(os.path.realpath(__file__)))
 
 import falcon
-import config
-from database import db_obj
-from Resource import Resource
-from middleware import AzureADTokenValidator, CORSComponent, CacheController
+from .config import config
+from .database import db_obj
+from .Resource import Resource
+from .middleware import AzureADTokenValidator, CORSComponent, CacheController
 
 # Create the falcon API instance (a WSGI app)
 def create():
 
     # Initialize validation middleware
-    azure_cfg = config.config['azure_ad']
+    azure_cfg = config['azure_ad']
     validator = AzureADTokenValidator(azure_cfg['tenant_name'], azure_cfg['app_id'])
 
     # Initialize other middleware

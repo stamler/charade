@@ -1,6 +1,6 @@
 import mysql.connector
 import logging
-import config
+from .config import config
 from os import path
 from sqlalchemy import create_engine
 from sqlalchemy.inspection import inspect
@@ -124,4 +124,4 @@ class Database(object):
     def snake_to_camel(self, the_input):
         return ''.join(w.capitalize() for w in (the_input.rsplit('_')))
 
-db_obj = Database(config.config)
+db_obj = Database(config)

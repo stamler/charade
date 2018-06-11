@@ -4,10 +4,9 @@
 import jwt
 import falcon
 import time
-import config
 import requests
 import logging
-from database import db_obj
+from .database import db_obj
 from cryptography.x509 import load_pem_x509_certificate as load_cert
 from cryptography.hazmat.backends import default_backend
 
