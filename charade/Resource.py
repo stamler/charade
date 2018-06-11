@@ -58,9 +58,14 @@ class Resource(object):
             # a collection was requested
             rows = session.query(self.sqla_obj)
 
-            # Apply any query string filters
-            for f in self.get_query_params(req.params) :
-                rows = rows.filter(getattr(self.sqla_obj, f[0]) == f[1])
+            # Apply query string filters. If there is more than one value
+            # for a given key, return resources matching ANY of those values.
+            for k, v in self.validate_params(req.params).items():
+                if v.__class__.__name__ != 'list':
+                    # filter method expects a list in the in_() clause
+                    # https://stackoverflow.com/questions/7942547
+                    v = [v]
+                rows = rows.filter(getattr(self.sqla_obj, k).in_(v))
 
             rows = rows.all()
             data = []
@@ -235,18 +240,11 @@ class Resource(object):
 
         return status, response_body
 
-    # Given request params, keep the valid ones for the resource then
-    # generate a tuple in the correct order for SQL execute()
-    def get_query_params(self, params):
-        # Handle query params as follows:
-        # TODO: Handle multiple values for same key as SQL 'OR' in WHERE
-
-        # Create an empty list of parameter filter_values
-        filter_values = []
-        # for each table column ...
-        for c in inspect(self.sqla_obj).columns:
-            # ... that is also a key in the request query parameters
-            if c.name in params:
-                # make a tuple then append to filter_values list
-                filter_values.append((c.name, params[c.name]))
-        return filter_values
+    # Remove query string params that don't match table column names
+    # In falcon, where the parameter appears multiple times in the 
+    # query string, the value mapped to that parameter key will be a list
+    # of all the values in the order seen, otherwise a string.
+    # TODO: Actually validate each parameter against the allowed types
+    def validate_params(self, params):
+        return {k: v for k, v in params.items() 
+                                    if k in inspect(self.sqla_obj).columns}
