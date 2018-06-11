@@ -235,16 +235,6 @@ class Resource(object):
 
         return status, response_body
 
-    # get the value of nested keys in a dictionary.
-    # If any of the keys doesn't exist return None.
-    def _safeget(self, dictionary, *keys):
-        for key in keys:
-            try:
-                dictionary = dictionary[key]
-            except KeyError:
-                return None
-        return dictionary
-
     # Given request params, keep the valid ones for the resource then
     # generate a tuple in the correct order for SQL execute()
     def get_query_params(self, params):
