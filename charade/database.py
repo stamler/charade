@@ -34,10 +34,8 @@ class Database(object):
             # produce our own MetaData object
             metadata = MetaData()
 
-            # reflect the entire database
-            # optionally use 'only' to limit reflected tables
-            only = config.get('tables_to_include', None)
-            metadata.reflect(engine, only=only)
+            # reflect entire database unless "tables_to_include" is in config
+            metadata.reflect(engine, only=config.get('tables_to_include', None))
 
             # we can then produce a set of mappings from this MetaData.
             self.Base = automap_base(metadata=metadata)
