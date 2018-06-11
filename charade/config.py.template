@@ -6,7 +6,7 @@ config = {
   "tables_prefix": "prefix_",
   "max_multi_responses":3,
   # If defined, only reflect these tables
-  # "tables_to_include": [table1, table2],
+  # "tables_to_include": ["prefix_table1", "prefix_table2"],
   "azure_ad":{
     "tenant_name":"tenant.onmicrosoft.com",
     "app_id":"https://company.ca/187man2a-edg9-1d3f-b87c-j989a20baaa0"
