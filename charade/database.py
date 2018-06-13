@@ -76,18 +76,27 @@ class Database(object):
         resources = { "Root": { "URIs":["/"], "sqla_obj":None }}
 
         for subclass in self.Base.__subclasses__():
-            
-            # Build a schema for each table so the UI knows how to make forms
-            schema = {}
+            # Build a json-schema for each table so the UI can build forms
+            json_schema = { 
+                "$schema": "http://json-schema.org/draft-07/schema#",
+                "title": subclass.__name__,
+                "type": "object",
+                "properties": {},
+                "required": [], # base this on NULL allowance in DB
+                "additionalProperties": False
+            }
             for c in inspect(subclass).columns:
-                schema[c.name] = self.__sqla_to_json_type(c.type)
-            
+                json_schema['properties'][c.name] = {}
+                json_schema['properties'][c.name]["type"] =  (
+                                            self.__sqla_to_json_type(c.type) )
+                #TODO: add all column names that are "NOT NULL" to required
+
             # create baseURI plus URI with field expression for {id}
             uri_base = '/' + subclass.__name__
             uri_id = uri_base + r"/{id:int(min=0)}"
 
             resources[subclass.__name__] = {}            
-            resources[subclass.__name__]['schema'] = schema
+            resources[subclass.__name__]['json_schema'] = json_schema
             resources[subclass.__name__]['URIs'] = [uri_base, uri_id]
             resources[subclass.__name__]['sqla_obj'] = subclass
 
@@ -96,8 +105,10 @@ class Database(object):
     def __sqla_to_json_type(self, sqla_type):
         # 6 primitive types:
         # array, boolean, object, string, null, number
+        #TODO: include validation parameters like length, regexes
+        # confirming to JSON schema
         type_map = {
-            "int":"number",
+            "int":"integer",
             "str":"string",
             "datetime":"string",
             "date":"string"
