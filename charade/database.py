@@ -89,7 +89,15 @@ class Database(object):
                 json_schema['properties'][c.name] = {}
                 json_schema['properties'][c.name]["type"] =  (
                                             self.__sqla_to_json_type(c.type) )
-                #TODO: add all column names that are "NOT NULL" to required
+
+                # add columns that are not nullable to required
+                # TODO: This adds the primary key, which could present
+                # an issue when we're POSTing since POSTs don't include
+                # primary keys. PUTs do so we'll leave it for now but this
+                # should be handled, likely in the client since charade
+                # can't know which method the schema is going to be used for
+                if c.nullable == False:
+                    json_schema['required'].append(c.name)
 
             # create baseURI plus URI with field expression for {id}
             uri_base = '/' + subclass.__name__
