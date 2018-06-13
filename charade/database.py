@@ -96,18 +96,13 @@ class Database(object):
     def __sqla_to_json_type(self, sqla_type):
         # 6 primitive types:
         # array, boolean, object, string, null, number
-
-        conversion = {
+        type_map = {
             "int":"number",
             "str":"string",
             "datetime":"string",
             "date":"string"
         }
-
-        # conversion[c.type.python_type.__name__]
-
-        json_type = str(sqla_type)
-        return json_type
+        return type_map[ sqla_type.python_type.__name__ ]
 
     # custom class names
     def custom_classname(self, base, tablename, table):
