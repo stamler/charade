@@ -169,7 +169,6 @@ class Resource(object):
     # The API thus supports posting 1 OR Multiple resources to an
     # endpoint and replying according to the Principle of Least Astonishment
     # https://apihandyman.io/api-design-tips-and-tricks-getting-creating-updating-or-deleting-multiple-resources-in-one-api-call/#single-and-multiple-creations-with-the-same-endpoint
-
     def on_post(self, req, resp):
         if self.is_root:
             resp.status = falcon.HTTP_405
