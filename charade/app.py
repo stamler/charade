@@ -22,7 +22,9 @@ def create():
     cors = CORSComponent()
     cache_controller = CacheController()
 
-    app = falcon.API(middleware = [ cors, validator, cache_controller ])
+    app = falcon.API(
+            media_type="application/vnd.api+json",
+            middleware = [ cors, validator, cache_controller ] )
 
     # instantiate resources and map routes to them
     for _, res_config in db_obj.resources.items():
