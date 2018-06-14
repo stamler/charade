@@ -84,6 +84,24 @@ class Resource(object):
 
         resp.body = json.dumps(body, default=str)
 
+    # Create a JSON API resource object from an SQLAlchemy row
+    # http://jsonapi.org/format/#document-resource-objects
+    def __row_to_resource(self, row):
+        attributes = {c.key: getattr(row, c.key)
+                for c in inspect(row).mapper.column_attrs}
+
+        # spec requires id to be a string and a type in every object
+        resource = {
+            "type": self.name, 
+            "id": str(attributes['id']) 
+        }
+        del(attributes['id'])
+
+        # spec requires remaining attributes under "attributes"
+        resource['attributes'] = attributes
+
+        return resource
+
     def on_delete(self, req, resp, id=None):
         if self.is_root or id is None:
             resp.status = falcon.HTTP_405
