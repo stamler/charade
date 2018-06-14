@@ -117,7 +117,7 @@ class Resource(object):
     def on_delete(self, req, resp, id=None):
         if self.is_root or id is None:
             resp.status = falcon.HTTP_405
-            body = { "errors": [{"title": "Cannot delete this resource"}] }
+            body = { "errors": [{"title": "Cannot delete specified resource"}]}
             resp.body = json.dumps(body, default=str)
             return
 
@@ -129,19 +129,18 @@ class Resource(object):
             session.delete(item)
             session.commit()
             resp.status = falcon.HTTP_200
-            body = { "data": "Deleted item from {} with id {}".format(
-                                                        self.name,id) }
+            body = { "data": { "type": self.name, "id": str(id) } }
             resp.body = json.dumps(body, default=str)
         except orm.exc.NoResultFound as e:
             resp.status = falcon.HTTP_404
-            body = { "errors": [{"title": "{} has no item with id {}".format(
-                                                        self.name, id)}] }
+            body = { "errors": [{"title": "{} has "
+                            "no item with specified id".format(self.name)}] }
             resp.body = json.dumps(body, default=str)
             return
         except orm.exc.MultipleResultsFound as e:
             resp.status = falcon.HTTP_500
-            body = { "errors": [{"title": "{} has multiple items with id: {}. {}".format(
-                                                        self.name, id, e)}] }
+            body = { "errors": [{"title": "{} has "
+                "multiple items with specified id. {}".format(self.name, e)}] }
             resp.body = json.dumps(body, default=str)
             return
         except exc.SQLAlchemyError as e:
