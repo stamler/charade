@@ -48,12 +48,8 @@ class Resource(object):
         included = {}
         if id is not None:
             # a single object was requested
-            # The JSON API spec requires that we return one of:
-            #   - a single resource object OR resource identifier object
-            #   - null
-
             row = session.query(self.sqla_obj).get(id)
-            if (row is not None):
+            if (row):
                 data = self.__row_to_resource(row)
                 resp.status = falcon.HTTP_200
 
@@ -91,7 +87,7 @@ class Resource(object):
 
             resp.status = falcon.HTTP_200
 
-
+        # data has been generated, now assemble the response
         if resp.status == falcon.HTTP_200:
             body = {'data': data }
             if len(included) > 0:
