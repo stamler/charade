@@ -39,6 +39,7 @@ docker run -v /path/to/app:/app -p 9090:9090 charade
 
 ## Roadmap
 
+- Leverage SQL Alchemy for versioned [joins with history](https://stackoverflow.com/questions/50840869). Some examples are [here](http://docs.sqlalchemy.org/en/latest/orm/examples.html#module-examples.versioned_rows).
 - Foreign Key Handling:
   1-to-N relationship behaviour (SoftwareTitles to SoftwareKeys):
     SoftwareTitles detail should list SoftwareKeys
