@@ -23,6 +23,8 @@ docker run -v /path/to/app:/app -p 9090:9090 charade
 
 ## TODO
 
+- Validate both Authentication and Authorization including group membership
+- Implement some type of RBAC
 - Let's Encrypt integration in the docker container
 - Write tests for the AzureADTokenValidator
 - Ensure all output (including errors) conforms to [JSON API](http://jsonapi.org/schema)
