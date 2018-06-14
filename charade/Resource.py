@@ -31,11 +31,11 @@ class Resource(object):
     def on_get(self, req, resp, id=None):
         if self.is_root:
             resp.status = falcon.HTTP_200
-            body = { 'data': [] }
+            body = { "data": [] }
             for k, v in db_obj.resources.items():
                 if k == 'Root':
                     continue
-                body['data'].append({
+                body["data"].append({
                         "type": "Resource", "id": k,
                         "attributes": { "json_schema": v['json_schema'] }
                     })
@@ -88,11 +88,11 @@ class Resource(object):
 
         # data has been generated, now assemble the response
         if resp.status == falcon.HTTP_200:
-            body = {'data': data }
+            body = {"data": data }
             if len(included) > 0:
                 body['included'] = included
         else:
-            body = { "errors":["Something went south."]}
+            body = { "errors":[{"title": "Something went south."}]}
 
         resp.body = json.dumps(body, default=str)
 
@@ -117,7 +117,7 @@ class Resource(object):
     def on_delete(self, req, resp, id=None):
         if self.is_root or id is None:
             resp.status = falcon.HTTP_405
-            body = { 'errors': ['Cannot delete this resource'] }
+            body = { "errors": [{"title": "Cannot delete this resource"}] }
             resp.body = json.dumps(body, default=str)
             return
 
@@ -129,25 +129,25 @@ class Resource(object):
             session.delete(item)
             session.commit()
             resp.status = falcon.HTTP_200
-            body = { 'data': "Deleted item from {} with id {}".format(
+            body = { "data": "Deleted item from {} with id {}".format(
                                                         self.name,id) }
             resp.body = json.dumps(body, default=str)
         except orm.exc.NoResultFound as e:
             resp.status = falcon.HTTP_404
-            body = { 'errors': ["{} has no item with id {}".format(
-                                                        self.name, id)] }
+            body = { "errors": [{"title": "{} has no item with id {}".format(
+                                                        self.name, id)}] }
             resp.body = json.dumps(body, default=str)
             return
         except orm.exc.MultipleResultsFound as e:
             resp.status = falcon.HTTP_500
-            body = { 'errors': ["{} has multiple items with id: {}. {}".format(
-                                                        self.name, id, e)] }
+            body = { "errors": [{"title": "{} has multiple items with id: {}. {}".format(
+                                                        self.name, id, e)}] }
             resp.body = json.dumps(body, default=str)
             return
         except exc.SQLAlchemyError as e:
             session.rollback()
             resp.status = falcon.HTTP_500
-            body = { 'errors': [e] }
+            body = { "errors": [{"title": e}] }
             resp.body = json.dumps(body, default=str)
 
     # Handle POST requests to a resource and creates a new row in the table
@@ -172,7 +172,7 @@ class Resource(object):
     def on_post(self, req, resp):
         if self.is_root:
             resp.status = falcon.HTTP_405
-            body = { 'errors': ['Cannot create resources here'] }
+            body = { "errors": [{"title": "Cannot create resources here"}] }
             resp.body = json.dumps(body, default=str)
             return
 
@@ -183,7 +183,7 @@ class Resource(object):
             if data.__class__.__name__ == 'dict':
                 # Processing a single objects
                 resp.status, body = self._insert_into_db( data )
-                resp.body = json.dumps({'data':body})
+                resp.body = json.dumps({"data":body})
             elif data.__class__.__name__ == 'list':
                 # Processing an array of objects
                 length = len(data)
@@ -192,7 +192,7 @@ class Resource(object):
                     self.log.debug("Multi-response max exceeded. Batching.")
                     # INSERT all data items in one shot and give one response
                     resp.status, body = self._insert_into_db( data )
-                    resp.body = json.dumps({'data':body})
+                    resp.body = json.dumps({"data":body})
                 else:
                     # Perform separate INSERT for each item in the data list
                     # then encapsulate each response into a multi 207 with
@@ -217,10 +217,10 @@ class Resource(object):
 
                     self.log.debug("Skipped {} items missing client_id".format(skips))
                     resp.status = falcon.HTTP_207
-                    resp.body = json.dumps({'data':resps})
+                    resp.body = json.dumps({"data":resps})
             else:
                 resp.status = falcon.HTTP_500
-                resp.body = json.dumps({'errors':["Unrecognized data POSTed"]})
+                resp.body = json.dumps({"errors": [{"title": "Unrecognized data POSTed"}]})
 
     # Validate that the given keys are in the target table
     # then return a python obj to be used as argument for new item constructor
@@ -249,7 +249,7 @@ class Resource(object):
                 status = falcon.HTTP_201
             except exc.SQLAlchemyError as e:
                 session.rollback()
-                response_body['errors'] = ["{}. Rolled back changes.".format(e)]
+                response_body["errors"] = ["{}. Rolled back changes.".format(e)]
                 status = falcon.HTTP_500
 
         else:
@@ -263,7 +263,7 @@ class Resource(object):
                 response_body['id'] = item.id
                 status = falcon.HTTP_201
             except exc.SQLAlchemyError as e:
-                response_body['errors'] = ["{}. Rolled back changes.".format(e)]
+                response_body["errors"] = ["{}. Rolled back changes.".format(e)]
                 status = falcon.HTTP_500
 
         return status, response_body
