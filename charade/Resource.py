@@ -29,7 +29,6 @@ class Resource(object):
     # Handle GET requests to a resource that represents all rows of a single
     # table in the database. If the request contains an id "field expression"
     # then return a single object.
-    # ASSUME col 0 of the table in question is called 'id' and type INTEGER
     def on_get(self, req, resp, id=None):
         if self.is_root:
             resp.status = falcon.HTTP_200
