@@ -37,8 +37,6 @@ class Resource(object):
             for k, v in db_obj.resources.items():
                 if k == 'Root':
                     continue
-                self.log.debug(k)
-                self.log.debug(v)
                 resource = {
                     "type": "Resource",
                     "id": k,

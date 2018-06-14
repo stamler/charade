@@ -24,7 +24,7 @@ def create():
 
     app = falcon.API(middleware = [ cors, validator, cache_controller ])
 
-    # instantiate resources, hook up routes and store references to them in db_obj
+    # instantiate resources and map routes to them
     for _, res_config in db_obj.resources.items():
         resource = Resource(res_config)
         for uri in res_config['URIs']:
