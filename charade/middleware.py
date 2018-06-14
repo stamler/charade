@@ -58,6 +58,9 @@ class AzureADTokenValidator(object):
         if (auth_header):
             access_token = auth_header.partition('Bearer ')[2]
         else:
+            #TODO: Ensure this is in JSON API format (it's not right now)
+            # Also make sure Content-Type header is correct per docs
+            # http://falcon.readthedocs.io/en/stable/api/errors.html
             raise falcon.HTTPUnauthorized("No authorization header provided.")
 
         # reload the keys if they're stale
@@ -82,11 +85,20 @@ class AzureADTokenValidator(object):
                     self.log.debug("Token is valid until {}".format(expiry))
                     return decoded
                 except jwt.InvalidTokenError as e:
+                    #TODO: Ensure this is in JSON API format (it's not right now)
+                    # Also make sure Content-Type header is correct per docs
+                    # http://falcon.readthedocs.io/en/stable/api/errors.html
                     raise falcon.HTTPUnauthorized("Provided token is invalid: {}".format(e))
             else:
+                #TODO: Ensure this is in JSON API format (it's not right now)
+                # Also make sure Content-Type header is correct per docs
+                # http://falcon.readthedocs.io/en/stable/api/errors.html
                 raise falcon.HTTPUnauthorized("Provided token signed by an "
                                               "unrecognized authority.")
         else:
+            #TODO: Ensure this is in JSON API format (it's not right now)
+            # Also make sure Content-Type header is correct per docs
+            # http://falcon.readthedocs.io/en/stable/api/errors.html
             raise falcon.HTTPUnauthorized("No token provided.")
 
     # Raise an exception if the authenticated token doesn't
@@ -107,6 +119,9 @@ class AzureADTokenValidator(object):
             #   raise falcon.HTTPForbidden("user doesn't have permission")
             return
         else:
+            #TODO: Ensure this is in JSON API format (it's not right now)
+            # Also make sure Content-Type header is correct per docs
+            # http://falcon.readthedocs.io/en/stable/api/errors.html
             raise falcon.HTTPForbidden("Unrecognized user")
 
     def process_request(self, req, resp):
