@@ -25,7 +25,6 @@ class Resource(object):
             self.name = "Root"
         self.log.debug("__init__ Resource: " + self.name)
 
-
     # Handle GET requests to a resource that represents all rows of a single
     # table in the database. If the request contains an id "field expression"
     # then return a single object.
