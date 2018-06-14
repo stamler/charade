@@ -25,13 +25,15 @@ docker run -v /path/to/app:/app -p 9090:9090 charade
 
 - Let's Encrypt integration in the docker container
 - Write tests for the AzureADTokenValidator
-- Make root return app-loading stuff for Vue.js and nothing more
-- Make JSON api return errors formatted at JSON
+- Ensure all output (including errors) conforms to [JSON API](http://jsonapi.org/schema)
 - Finish all GET requests without customizations
 - Build out generalized POST for creating new mysql objects
 - Write other Tests and TEST
 - Clean up the code and make it generic for deployment
 - Build in ability to run against other databases like SQLite, PostgreSQL, or Redshift
+- Validator against [JSON schema](http://falcon.readthedocs.io/en/stable/api/media.html?#validating-media)
+- Make the only necessary configuration based on an SQLAlchemy model, including validation
+- Support versioned one-to-many relationships with joiner tables in SQLAlchemy model config
 
 ## Roadmap
 
