@@ -42,20 +42,31 @@ class Resource(object):
         included = {}
         if id is not None:
             # a single object was requested
+            # The JSON API spec requires that we return one of:
+            #   - a single resource object OR resource identifier object
+            #   - null
+
             row = session.query(self.sqla_obj).get(id)
             if (row is not None):
-                data = {c.key: getattr(row, c.key)
-                        for c in inspect(row).mapper.column_attrs}
+                data = self.__row_to_resource(row)
                 resp.status = falcon.HTTP_200
 
                 # get any related child resources here and put them
                 # inside included {} declared above
 
             else:
+                # JSON API spec requires 'null' if a resource could
+                # but does not exist at this address. In practice
+                # this likely won't be used because we're returning 404
+                data = None
                 resp.status = falcon.HTTP_404
 
         else:
             # a collection was requested
+            # The JSON API spec requires that we return one of:
+            #   - an array of resource objects OR resource identifier objects
+            #   - an empty array []
+            
             rows = session.query(self.sqla_obj)
 
             # Apply query string filters. If there is more than one value
@@ -70,8 +81,8 @@ class Resource(object):
             rows = rows.all()
             data = []
             for row in rows:
-                data.append({c.key: getattr(row, c.key)
-                        for c in inspect(row).mapper.column_attrs})
+                data.append(self.__row_to_resource(row))
+
             resp.status = falcon.HTTP_200
 
 
@@ -137,7 +148,6 @@ class Resource(object):
             resp.status = falcon.HTTP_500
             body = { 'errors': [e] }
             resp.body = json.dumps(body, default=str)
-
 
     # Handle POST requests to a resource and creates a new row in the table
     # represented by the resource. This method handles incomplete fields-
