@@ -33,7 +33,21 @@ class Resource(object):
     def on_get(self, req, resp, id=None):
         if self.is_root:
             resp.status = falcon.HTTP_200
-            body = { 'data': db_obj.resources }
+            data = []
+            for k, v in db_obj.resources.items():
+                if k == 'Root':
+                    continue
+                self.log.debug(k)
+                self.log.debug(v)
+                resource = {
+                    "type": "Resource",
+                    "id": k,
+                    "attributes": {
+                        "json_schema": v['json_schema']
+                    }
+                }
+                data.append(resource)
+            body = { 'data': data }
             resp.body = json.dumps(body, default=str)
             return
 
