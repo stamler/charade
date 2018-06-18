@@ -5,7 +5,6 @@ from os import path
 from sqlalchemy import create_engine, MetaData
 from sqlalchemy.inspection import inspect
 from sqlalchemy.orm import Session
-from sqlalchemy.ext.automap import automap_base
 from sqlalchemy.exc import DatabaseError
 
 class Database(object):
@@ -31,16 +30,28 @@ class Database(object):
 
         engine = create_engine(config['db'], pool_pre_ping=True)
         try:
-            # produce our own MetaData object
-            metadata = MetaData()
+            self.log.debug("Attempting to load model.py")
+            from .model import Base
+            self.Base = Base
+        except ModuleNotFoundError as e:
+            self.log.debug("model.py not found, running with automap_base")
+            from sqlalchemy.ext.automap import automap_base
 
-            # reflect entire database unless "tables_to_include" is in config
+            # produce MetaData object then reflect entire database
+            # unless "tables_to_include" is in config
+            metadata = MetaData()
             metadata.reflect(engine, only=config.get('tables_to_include', None))
 
             # we can then produce a set of mappings from this MetaData.
             self.Base = automap_base(metadata=metadata)
-
             self.Base.prepare(classname_for_table=self.custom_classname)
+
+        try:
+            # TODO: There's an issue in these two try/except blocks.
+            # the DatabaseError needs to be caught precisely after the first
+            # connection is attempted regardless of whether or not model.py
+            # or automap is used. Ideally a single try-block with multiple
+            # except blocks is the solution.
             self.session = Session(engine)
         except DatabaseError as e:
             self.log.error("No Database Connection: {}".format(e))
@@ -119,7 +130,8 @@ class Database(object):
             "int":"integer",
             "str":"string",
             "datetime":"string",
-            "date":"string"
+            "date":"string",
+            "bool":"boolean"
         }
         return type_map[ sqla_type.python_type.__name__ ]
 
