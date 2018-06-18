@@ -37,8 +37,6 @@ class Resource(object):
                     continue
                 body["data"].append({
                         "type": "Resource", "id": k,
-                        # TODO: get displayInNav attribute from model.py here
-                        "displayInNav": True,
                         "attributes": { "json_schema": v['json_schema'] }
                     })
             resp.body = json.dumps(body, default=str)
