@@ -74,3 +74,9 @@ DELETE    /Resources/id
 - PATCH and GET where IDs are specified
 - POST with multiple entries (likely an extension of the base software like middleware or a plugin)
 - More complex queries (likely an extension of the base software like middleware or a plugin)
+
+## Versioned sections of a table
+
+- Move the current FK into the primary table. For example, Computers should have a locations_id column that's an FK referencing locations.id. The old way was to have a joiner table and this is much more complex to query and insert to.
+- When inserting a new item into the primary table (ie Computers) include an FK if desired but it's not necessary.
+- When updating an item in the primary table (ie Computers) use the runtime inspection API before a flush to verify whether specified attributes have changed. [InstanceState](http://docs.sqlalchemy.org/en/latest/orm/internals.html#sqlalchemy.orm.state.InstanceState) and AttributeState may be the tools used. If one of the specified attributes has been changed, save the _previous value_ to a separate versions table  defined in the model (ie ComputerLocations_history).
