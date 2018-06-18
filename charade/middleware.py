@@ -108,7 +108,11 @@ class AzureADTokenValidator(object):
         session = db_obj.get_session()
 
         # Get the user from claims
-        user = session.query(db_obj.resources['Users']['sqla_obj']).filter_by(work_email=claims['upn'])
+        # TODO: SQLACodeGen inflects table names to singular when creating 
+        # classes in model.py. Next line uses the key 'User'. This may not 
+        # be expected when using automap if the db table name is pluralized. 
+        # This needs to be fixed by using a configuration item 
+        user = session.query(db_obj.resources['User']['sqla_obj']).filter_by(work_email=claims['upn'])
 
         if (user is not None):
             # user is in the database, load their roles
