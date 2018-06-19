@@ -1,12 +1,12 @@
 # charade
 
-A Simultaneous Translator for mysql and JSON
+Realtime JSON API generation for SQL Alchemy models
 
 MIT License
 
 Copyright (c) 2018 Dean Stamler
 
-Charade is a Python WSGI application that connects to a mysql database, loads the schema, and then presents a sensible JSON API based on that schema. Through configuration, it can also provide finer control over the JSON API it generates. Authentication is provided by Microsoft Azure AD.
+Charade is a Python WSGI application that connects to any database supported by SQLAlchemy and loads the schema defined in model.py. It then presents a sensible JSON API based on that schema. If no model.py is provided, it will use SQLAlchemy Automap to reflect and generate an API automatically. Middleware is provided to authenticate against Microsoft Azure AD.
 
 Charade is built, tested, and deployed inside a Docker container.
 
