@@ -100,6 +100,9 @@ class Database(object):
                 json_schema['properties'][c.name] = {}
                 json_schema['properties'][c.name]["type"] =  (
                                             self.__sqla_to_json_type(c.type) )
+                json_schema['properties'][c.name]["title"] = c.info.get('title')
+                json_schema['properties'][c.name]["attrs"] = {}
+                json_schema['properties'][c.name]["attrs"]["placeholder"] = c.info.get('placeholder')
 
                 # add columns that are not nullable to required
                 # TODO: This adds the primary key, which could present
