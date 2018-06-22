@@ -272,6 +272,9 @@ class Resource(object):
     # query string, the value mapped to that parameter key will be a list
     # of all the values in the order seen, otherwise a string.
     # TODO: Actually validate each parameter against the allowed types
+    # These types should be stored in model.py somehow and should match
+    # The validation information included in json_schema for pre-validation
+    # in the web-client
     def validate_params(self, params):
         return {k: v for k, v in params.items() 
                                     if k in inspect(self.sqla_obj).columns}
