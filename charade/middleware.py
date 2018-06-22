@@ -152,7 +152,8 @@ class AzureADTokenValidator(object):
         # for g in security_groups:
         #  if g in allowed_groups:
         #    return
-        # raise 403 forbidden
+        # Raise a 403
+        # raise falcon.HTTPForbidden("You are not allowed to do this.")
 
     def process_request(self, req, resp):
         # Next line necessary because CORS plugin isn't activated in exception situation
