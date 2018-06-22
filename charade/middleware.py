@@ -9,6 +9,7 @@ import logging
 from .database import db_obj
 from cryptography.x509 import load_pem_x509_certificate as load_cert
 from cryptography.hazmat.backends import default_backend
+from urllib.parse import urlsplit
 
 
 # The Authentication and Authorization section of the app.
@@ -104,30 +105,54 @@ class AzureADTokenValidator(object):
     # Raise an exception if the authenticated token doesn't
     # have privileges for the requested resource.
     def authorize(self, claims, req):
-        method, uri = req.method, req.uri
+        # AzureAD includes group claims in the token if the manifest contains
+        # groupMembershipsClaims with value of "SecurityGroup" or "All" 
+        security_groups = claims['groups']
+
+        # In order to search the database for the correct permissions we 
+        # need to get a standard format for resource_name from the request.
+        # Unless a baseURL is specified (not implemented) this is the
+        # first non-empty segment of the "path" component returned by the
+        # urlsplit() method of urllib.parse available in Python 3.
+        # urlsplit() and urlparse() retain the leading slash in the
+        # https://docs.python.org/3/library/urllib.parse.html#urllib.parse.urlparse
+        # path component raising some issues:
+        # 1. If we're going to do a split() with a '/' delimiter then the
+        #    first element in the resulting list will be an empty string. 
+        # 2. The URL may contain multiple consecutive slashes since it is 
+        #    not normalized
+        # 3. The database stores 'resources' with a leading slash included
+        #    so that the root url can contain text (just a '/') so after 
+        #    splitting we have to tack a leading slash back on prior to
+        #    querying the DB for permissions
+        # 
+        # IFF in the future we decide to support a baseURL (i.e. netloc + a
+        # path segment(s) goes before resource name) then we would count
+        # the number of path segments in that baseURL when it is set and add 
+        # that number to the index so that we can accurately extract the name
+        # of the resource.
+        #
+        # The solution is to do a split against slash delimiters, remove empty
+        # strings, then take element at index 0 + (baseURL path segment count),
+        # falling back to the root url if there are no non-empty path segments
+        method, path = req.method, urlsplit(req.uri).path
+        try:
+            resource = '/' + [r for r in path.split('/') if r != ''][0]
+        except IndexError:
+            resource = '/'
+        self.log.debug("Method: {} Resource: {}".format(method, resource))
+
         session = db_obj.get_session()
 
-        # Get the user from claims
-        # TODO: SQLACodeGen inflects table names to singular when creating 
-        # classes in model.py. Next line uses the key 'Users'. This is 
-        # expected when using automap if the db table name is plural.
-        # This discrepancy needs to be fixed by using a configuration item
-        # for the name of the item that maps to the table of users. 
-        user = session.query(db_obj.resources['Users']['sqla_obj']).filter_by(work_email=claims['upn'])
+        # Get the APIResources id for the given method and resource
 
-        if (user is not None):
-            # user is in the database, load their roles
-            #   for each role in roles look for the uri
-            #       if the uri is found look for the method
-            #           if the method is found
-            #               return
-            #   raise falcon.HTTPForbidden("user doesn't have permission")
-            return
-        else:
-            #TODO: Ensure this is in JSON API format (it's not right now)
-            # Also make sure Content-Type header is correct per docs
-            # http://falcon.readthedocs.io/en/stable/api/errors.html
-            raise falcon.HTTPForbidden("Unrecognized user")
+        # Get the list of groups allowed to use this APIResources id 
+        # from permissions as a list called allowed_groups[]
+
+        # for g in security_groups:
+        #  if g in allowed_groups:
+        #    return
+        # raise 403 forbidden
 
     def process_request(self, req, resp):
         # Next line necessary because CORS plugin isn't activated in exception situation
