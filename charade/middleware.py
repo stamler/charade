@@ -135,25 +135,35 @@ class AzureADTokenValidator(object):
         # The solution is to do a split against slash delimiters, remove empty
         # strings, then take element at index 0 + (baseURL path segment count),
         # falling back to the root url if there are no non-empty path segments
-        method, path = req.method, urlsplit(req.uri).path
+        path = urlsplit(req.uri).path
         try:
-            resource = '/' + [r for r in path.split('/') if r != ''][0]
+            res = '/' + [r for r in path.split('/') if r != ''][0]
         except IndexError:
-            resource = '/'
-        self.log.debug("Method: {} Resource: {}".format(method, resource))
+            res = '/'
+        self.log.debug("Method: {} Resource: {}".format(req.method, res))
 
-        session = db_obj.get_session()
+        # Get the list of groups allowed to use this method on
+        # this resource and store it in authorized_groups[]
+        APIRequests = db_obj.resources['APIRequests']['sqla_obj']
+        Permissions = db_obj.resources['Permissions']['sqla_obj']
+        query = db_obj.get_session().query(Permissions.group_oid).\
+                    join(APIRequests).\
+                    filter(APIRequests.verb == req.method).\
+                    filter(APIRequests.resource == res)
+        # Each result is a named tuple, even for just one column 
+        # so we flatten into a list of strings (note the comma: g,)
+        authorized_groups = [g for g, in query]
 
-        # Get the APIResources id for the given method and resource
-
-        # Get the list of groups allowed to use this APIResources id 
-        # from permissions as a list called allowed_groups[]
-
-        # for g in security_groups:
-        #  if g in allowed_groups:
-        #    return
-        # Raise a 403
-        # raise falcon.HTTPForbidden("You are not allowed to do this.")
+        # Return success if at least one of the group claims in the
+        # provided token is in the authorized_groups list, otherwise
+        # raise a 403 Forbidden HTTP Error Status  
+        for g in security_groups:
+            if g in authorized_groups:
+                self.log.debug("Group {} is allowed in authorized: {}".format(
+                    g, authorized_groups
+                ))
+                return
+        raise falcon.HTTPForbidden("You are not allowed to do this.")
 
     def process_request(self, req, resp):
         # Next line necessary because CORS plugin isn't activated in exception situation
