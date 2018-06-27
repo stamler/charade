@@ -6,6 +6,7 @@ from sqlalchemy import create_engine, MetaData
 from sqlalchemy.inspection import inspect
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import DatabaseError
+from typing import Any, Dict
 
 class Database(object):
 
@@ -60,7 +61,7 @@ class Database(object):
         # Load resources once and cache them
         self.resources = self.__get_resources()
 
-    def get_session(self):
+    def get_session(self) -> Session:
         return self.session
 
     # Read the database and load in table and column names, EXCLUDING VIEWS.
