@@ -140,31 +140,29 @@ class AzureADTokenValidator(object):
             res = '/' + [r for r in path.split('/') if r != ''][0]
         except IndexError:
             res = '/'
-        self.log.debug("Method: {} Resource: {}".format(req.method, res))
 
         # Get the list of groups allowed to use this method on
         # this resource and store it in authorized_groups[]
-        APIRequests = db_obj.resources['APIRequests']['sqla_obj']
+        Requests = db_obj.resources['Requests']['sqla_obj']
+        Roles = db_obj.resources['Roles']['sqla_obj']
         Permissions = db_obj.resources['Permissions']['sqla_obj']
-        query = db_obj.get_session().query(Permissions.group_oid).\
-                    join(APIRequests).\
-                    filter(APIRequests.verb == req.method).\
-                    filter(APIRequests.resource == res)
-        # Each result is a named tuple, even for just one column 
-        # so we flatten into a list of strings (note the comma: g,)
-        authorized_groups = [g for g, in query]
+        requests_roles = db_obj.Base.metadata.tables['charade_requests_roles']
+        query = db_obj.get_session().query(Permissions.group_oid, Roles.name,
+                    Requests.verb, Requests.resource).\
+                    join(Roles).\
+                    join(requests_roles).\
+                    join(Requests).\
+                    filter(Permissions.group_oid.in_(security_groups)).\
+                    filter(Requests.verb == req.method).\
+                    filter(Requests.resource == res)
+        row = query.first()
 
-        # Return success if at least one of the group claims in the
-        # provided token is in the authorized_groups list, otherwise
-        # raise a 403 Forbidden HTTP Error Status  
-        for g in security_groups:
-            if g in authorized_groups:
-                self.log.debug("Group {} is allowed in authorized: {}".format(
-                    g, authorized_groups
-                ))
-                return
-        raise falcon.HTTPForbidden("You are not allowed to do this.")
-
+        if row == None:
+            self.log.debug("Denied: {} {}".format(req.method, res))
+            raise falcon.HTTPForbidden("You are not allowed to do this.")
+        else:
+            self.log.debug("Allowed: {}".format(row))
+            
     def process_request(self, req, resp):
         # Next line necessary because CORS plugin isn't activated in exception situation
         #resp.set_header('Access-Control-Allow-Origin', '*')
