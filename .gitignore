@@ -12,3 +12,4 @@ experiments/
 start_uwsgi.sh
 .vscode
 model.py
+.mypy_cache
