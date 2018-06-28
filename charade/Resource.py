@@ -9,6 +9,8 @@ from .database import db_obj
 from sqlalchemy.inspection import inspect
 from sqlalchemy import exc
 from sqlalchemy import orm
+from sqlalchemy.exc import SQLAlchemyError
+from typing import Dict, List
 
 class Resource(object):
     def __init__(self, res):
@@ -149,6 +151,45 @@ class Resource(object):
             body = { "errors": [{"title": e}] }
             resp.body = json.dumps(body, default=str)
 
+    # Handle PATCH requests. An id must be specified to PATCH.
+    def on_patch(self, req, resp, id=None):
+        # Prevent blocking condition by ensuring content_length > 0
+        if id is not None and req.content_length and not self.is_root:
+            # capture the request body into data
+            # TODO: validate the data conforms JSON API
+            # TODO: validate payload of data conforms to http://jsonpatch.com
+            data: List = json.load(req.stream)
+            self.log.debug("DATA: " + str(data))
+
+            patch: Dict = {} 
+            for op in data:
+                # TODO: Every op must succeed otherwise report failure.
+                # For replace this is likely easy as we simply
+                if op["op"] == "replace":
+                    # TODO: validate that the path exists
+                    # if JSON pointer depth > 1, take first element
+                    path = [r for r in op["path"].split('/') if r != ''][0]
+                    patch[path] = op["value"]
+            self.log.debug("PATCH " + str(patch))
+
+            # do the patch
+            session = db_obj.get_session()
+            # TODO: remove hard-coded requirement that PK is "id"
+            result = session.query(self.sqla_obj).\
+                        filter( getattr(self.sqla_obj,"id") == id ).\
+                        update(patch)
+            try:
+                session.commit()
+                self.log.debug("Updated {} row(s).".format(result))
+            except SQLAlchemyError as e:
+                self.log.error(e)
+
+        else:
+            resp.status = falcon.HTTP_405
+            body = { "errors": [{"title": "Not an editable resource"}] }
+            resp.body = json.dumps(body, default=str)
+            return
+
     # Handle POST requests to a resource and creates a new row in the table
     # represented by the resource. This method handles incomplete fields-
     # that is to say that fields not provided will be assumed NULL in the
@@ -178,6 +219,7 @@ class Resource(object):
         # Prevent blocking condition by ensuring content_length > 0
         if req.content_length:
             # capture the request body into data
+            # TODO: validate the data conforms JSON API
             data = json.load(req.stream)
             if data.__class__.__name__ == 'dict':
                 # Processing a single objects
