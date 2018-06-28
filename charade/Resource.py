@@ -158,6 +158,7 @@ class Resource(object):
             # capture the request body into data
             # TODO: validate the data conforms JSON API
             # TODO: validate payload of data conforms to http://jsonpatch.com
+            # http://json.schemastore.org/json-patch
             data: List = json.load(req.stream)
             self.log.debug("DATA: " + str(data))
 
