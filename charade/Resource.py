@@ -160,21 +160,60 @@ class Resource(object):
             # TODO: validate payload of data conforms to http://jsonpatch.com
             # http://json.schemastore.org/json-patch
             data: List = json.load(req.stream)
-            self.log.debug("DATA: " + str(data))
 
+            # Build the patch object from the request
             patch: Dict = {} 
             for op in data:
                 # TODO: Every op must succeed otherwise report failure.
-                # For replace this is likely easy as we simply
+                # For replace this is likely easy as we simply rollback
+                # rather than commit.
+
+                # TODO: Implement 'add', 'remove' and 'test' ops.
+                # Semantically since we're using a RDBMS 'add' and 'remove' 
+                # ops should only really apply to to-many relationships where
+                # we're adding or removing from a set of properties on another
+                # table (Class). Most ops will be 'replace'. 'move' and 'copy'
+                # will not be implemented in this context for now. 'test' 
+                # should eventually be included
+
+                # TODO: validate that the path exists (i.e. that it's 
+                # a real property in the database table)
+                # take first element of JSON pointer AFTER the slash 
+                # (not [0]) even if it's empty. Empty keys are valid
+                path = [r for r in op["path"].split('/')][1]
+
+                # handle "replace" op
                 if op["op"] == "replace":
-                    # TODO: validate that the path exists
-                    # take first element of JSON pointer AFTER the slash 
-                    # (not [0]) even if it's empty. Empty keys are valid
-                    path = [r for r in op["path"].split('/')][1]
                     patch[path] = op["value"]
+
+                # handle "test" op
+                elif op["op"] == "test":
+                    try:
+                        # query the database for the item then test equality
+                        # NB: since this isn't a write operation we can save 
+                        # this item and apply the rest of the operations 
+                        # against it within the ORM 
+                        # raise an exception if the test fails. Right now just
+                        # raise NotImplementedError
+                        raise NotImplementedError
+                    except:
+                        # handle the error that the value at the specified
+                        # path either doesn't exist or doesn't match
+                        self.log.debug("test op failed. no changes made")
+                        return
+
+                # handle "add" or "remove" ops
+                elif op["op"] == "add" or op["op"] == "remove":
+                    raise NotImplementedError
+
+            # log the no-action event from empty patch
+            if patch == {}:
+                self.log.debug("Empty patch. No changes made to database.")
+                return
+
             self.log.debug("PATCH " + str(patch))
 
-            # do the patch
+            # apply the patch created earlier
             session = db_obj.get_session()
             # TODO: remove hard-coded requirement that PK is "id"
             result = session.query(self.sqla_obj).\
@@ -182,7 +221,10 @@ class Resource(object):
                         update(patch)
             try:
                 session.commit()
+                assert(result == 1 or result == 0)
                 self.log.debug("Updated {} row(s).".format(result))
+            except AssertionError as e:
+                self.log.error(e)
             except SQLAlchemyError as e:
                 self.log.error(e)
 
