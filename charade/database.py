@@ -1,6 +1,6 @@
 import mysql.connector
 import logging
-from .config import config as global_configuration
+from .config import config as gc
 from os import path
 from sqlalchemy import create_engine, MetaData
 from sqlalchemy.inspection import inspect
@@ -10,7 +10,7 @@ from typing import Any, Dict
 
 class Database(object):
 
-    def __init__(self, config):
+    def __init__(self, config: Dict[str, Any]) -> None:
         # Configure logging
         self.log = logging.getLogger()
         self.log.setLevel(logging.DEBUG)
@@ -83,13 +83,13 @@ class Database(object):
     # the generation of a JSON Schema would also follow from that to the client.
     # In this way modifications to the backend would drive automatic 
     # modifications to the client.
-    def __get_resources(self):
+    def __get_resources(self) -> Dict[str, Any]:
         # describe the root resource
-        resources = { "Root": { "URIs":["/"], "sqla_obj":None }}
+        resources: Dict[str, Any] = { "Root": { "URIs":["/"], "sqla_obj":None }}
 
         for subclass in self.Base.__subclasses__():
             # Build a json-schema for each table so the UI can build forms
-            json_schema = { 
+            json_schema: Dict[str, Any] = { 
                 "$schema": "http://json-schema.org/draft-07/schema#",
                 "title": subclass.__name__,
                 "type": "object",
@@ -123,19 +123,20 @@ class Database(object):
             uri_base = '/' + subclass.__name__
             uri_id = uri_base + r"/{id:int(min=0)}"
 
-            resources[subclass.__name__] = {}            
-            resources[subclass.__name__]['json_schema'] = json_schema
-            resources[subclass.__name__]['URIs'] = [uri_base, uri_id]
-            resources[subclass.__name__]['sqla_obj'] = subclass
+            resources[subclass.__name__] = {
+                "json_schema": json_schema,
+                "URIs": [uri_base, uri_id],
+                "sqla_obj": subclass
+            }
 
         return resources
 
-    def __sqla_to_json_type(self, sqla_type):
+    def __sqla_to_json_type(self, sqla_type) -> str:
         # 6 primitive types:
         # array, boolean, object, string, null, number
         #TODO: include validation parameters like length, regexes
         # confirming to JSON schema
-        type_map = {
+        type_map: Dict[str, str] = {
             "int":"integer",
             "str":"string",
             "datetime":"string",
@@ -145,15 +146,17 @@ class Database(object):
         return type_map[ sqla_type.python_type.__name__ ]
 
     # custom class names
-    def custom_classname(self, base, tablename, table):
+    def custom_classname(self, base, tablename: str, table) -> str:
         return self.snake_to_camel(self.strip_prefix(tablename))
 
     # Remove the tables_prefix
-    def strip_prefix(self, the_input):
-        return the_input.replace(global_configuration['tables_prefix'],"")
+    def strip_prefix(self, i: str) -> str:
+        # The str() verifies that the loaded value is a string
+        prefix: str = str(gc['tables_prefix'])
+        return i.replace(prefix,"")
 
     # Convert snake_case to CamelCase
-    def snake_to_camel(self, the_input):
-        return ''.join(w.capitalize() for w in (the_input.rsplit('_')))
+    def snake_to_camel(self, i: str) -> str:
+        return ''.join(w.capitalize() for w in (i.rsplit('_')))
 
-db_obj = Database(global_configuration)
+db_obj = Database(gc)
