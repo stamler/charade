@@ -168,8 +168,9 @@ class Resource(object):
                 # For replace this is likely easy as we simply
                 if op["op"] == "replace":
                     # TODO: validate that the path exists
-                    # if JSON pointer depth > 1, take first element
-                    path = [r for r in op["path"].split('/') if r != ''][0]
+                    # take first element of JSON pointer AFTER the slash
+                    # even if it is empty because an empty key is valid JSON
+                    path = [r for r in op["path"].split('/')][1]
                     patch[path] = op["value"]
             self.log.debug("PATCH " + str(patch))
 
