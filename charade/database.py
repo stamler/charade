@@ -19,15 +19,16 @@ class Database(object):
         self.log.addHandler(ch)
         self.log.debug("__init__ Database")
 
-        # PENDING_DELETION These 2 lines may become Vestigial after full SQLAlchemy transition
+        # TODO: PENDING_DELETION These 2 lines may become 
+        # Vestigial after full SQLAlchemy transition
         self.max_multi_responses = config.get('max_multi_responses', 5)
 
         # If we're running inside docker on a mac, we can access the outside
         # world using host.docker.internal
         if path.isfile('/app/isContainerized'):
-            self.log.debug("App detected it is running in a container "
-                        "DB connection may fail due to networking.\n"
-                        "If running Docker for Mac, try host.docker.internal")
+            self.log.debug("Charade thinks it's running in a container\n"
+                        "If true, DB connection may fail due to networking.\n"
+                        "On Docker for Mac, try host.docker.internal")
 
         engine = create_engine(config['db'], pool_pre_ping=True)
         try:
@@ -108,13 +109,11 @@ class Database(object):
                 if c.primary_key:
                     continue
 
-                json_schema['properties'][c.name] = {}
-                json_schema['properties'][c.name]["type"] =  (
-                                            self.__sqla_to_json_type(c.type) )
-                json_schema['properties'][c.name]["title"] = c.info.get('title')
-                json_schema['properties'][c.name]["attrs"] = {}
-                json_schema['properties'][c.name]["attrs"]["placeholder"] = c.info.get('placeholder')
-
+                json_schema['properties'][c.name] = {
+                    "type": self.__sqla_to_json_type(c.type),
+                    "title": c.info.get('title'),
+                    "attrs": { "placeholder": c.info.get('placeholder') } }
+ 
                 # add columns that are not nullable to required
                 if c.nullable == False:
                     json_schema['required'].append(c.name)
