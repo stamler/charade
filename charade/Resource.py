@@ -161,6 +161,9 @@ class Resource(object):
             # http://json.schemastore.org/json-patch
             data: List = json.load(req.stream)
 
+            # Get an SQLAlchemy session
+            session = db_obj.get_session()
+
             # Build the patch object from the request
             patch: Dict = {} 
             for op in data:
@@ -178,6 +181,7 @@ class Resource(object):
 
                 # TODO: validate that the path exists (i.e. that it's 
                 # a real property in the database table)
+                # TODO: implement support for paths deeper than 1
                 # take first element of JSON pointer AFTER the slash 
                 # (not [0]) even if it's empty. Empty keys are valid
                 path = [r for r in op["path"].split('/')][1]
@@ -193,13 +197,18 @@ class Resource(object):
                         # NB: since this isn't a write operation we can save 
                         # this item and apply the rest of the operations 
                         # against it within the ORM 
-                        # raise an exception if the test fails. Right now just
-                        # raise NotImplementedError
-                        raise NotImplementedError
-                    except:
-                        # handle the error that the value at the specified
-                        # path either doesn't exist or doesn't match
-                        self.log.debug("test op failed. no changes made")
+                        item = session.query(self.sqla_obj).get(id)
+
+                        # TODO: implement support for paths deeper than 1
+                        # assume path isn't deeper than 1 for now
+                        assert(getattr(item,path) == op["value"])
+                    except AttributeError:
+                        # TODO: return a useful message body
+                        self.log.debug("test op failed. Attribute not found")
+                        return
+                    except AssertionError:
+                        # TODO: return a useful message body
+                        self.log.debug("test op failed. Value doesn't match")
                         return
 
                 # handle "add" or "remove" ops
@@ -214,7 +223,6 @@ class Resource(object):
             self.log.debug("PATCH " + str(patch))
 
             # apply the patch created earlier
-            session = db_obj.get_session()
             # TODO: remove hard-coded requirement that PK is "id"
             result = session.query(self.sqla_obj).\
                         filter( getattr(self.sqla_obj,"id") == id ).\
