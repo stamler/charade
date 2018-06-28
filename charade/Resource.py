@@ -153,12 +153,22 @@ class Resource(object):
 
     # Handle PATCH requests. An id must be specified to PATCH.
     def on_patch(self, req, resp, id=None):
+
         # Prevent blocking condition by ensuring content_length > 0
         if id is not None and req.content_length and not self.is_root:
-            # capture the request body into data
+
+            # TODO: Consider that if id is specified and doesn't exist
+            # in the database, we should return a 404. Since test ops
+            # also rely on querying the database for the entire item,
+            # perhaps it is prudent to just grab the whole item from the 
+            # outset and edit it then save it using the SQLAlchemy ORM 
+            # We could declare the item variable here and load it
+
             # TODO: validate the data conforms JSON API
             # TODO: validate payload of data conforms to http://jsonpatch.com
             # http://json.schemastore.org/json-patch
+
+            # capture the request body into data
             data: List = json.load(req.stream)
 
             # Get an SQLAlchemy session
@@ -167,20 +177,10 @@ class Resource(object):
             # Build the patch object from the request
             patch: Dict = {} 
             for op in data:
-                # TODO: Every op must succeed otherwise report failure.
-                # For replace this is likely easy as we simply rollback
-                # rather than commit.
-
-                # TODO: Implement 'add', 'remove' and 'test' ops.
-                # Semantically since we're using a RDBMS 'add' and 'remove' 
-                # ops should only really apply to to-many relationships where
-                # we're adding or removing from a set of properties on another
-                # table (Class). Most ops will be 'replace'. 'move' and 'copy'
-                # will not be implemented in this context for now. 'test' 
-                # should eventually be included
 
                 # TODO: validate that the path exists (i.e. that it's 
                 # a real property in the database table)
+
                 # TODO: implement support for paths deeper than 1
                 # take first element of JSON pointer AFTER the slash 
                 # (not [0]) even if it's empty. Empty keys are valid
@@ -201,15 +201,23 @@ class Resource(object):
 
                         # TODO: implement support for paths deeper than 1
                         # assume path isn't deeper than 1 for now
+
                         assert(getattr(item,path) == op["value"])
                     except AttributeError:
                         # TODO: return a useful message body
-                        self.log.debug("test op failed. Attribute not found")
+                        self.log.debug("test op failed: Attribute not found")
                         return
                     except AssertionError:
                         # TODO: return a useful message body
-                        self.log.debug("test op failed. Value doesn't match")
+                        self.log.debug("test op failed: Value doesn't match")
                         return
+
+                # TODO: Implement 'add' and 'remove' ops. Semantically since 
+                # we're using a RDBMS 'add' and 'remove' ops should only 
+                # really apply to to-many relationships where we're adding or
+                # removing from a set of properties on another table (Class). 
+                # Most ops will be 'replace'. 'move' and 'copy' will not be
+                # implemented in this context for now.
 
                 # handle "add" or "remove" ops
                 elif op["op"] == "add" or op["op"] == "remove":
@@ -222,18 +230,23 @@ class Resource(object):
 
             self.log.debug("PATCH " + str(patch))
 
-            # apply the patch created earlier
-            # TODO: remove hard-coded requirement that PK is "id"
-            result = session.query(self.sqla_obj).\
+            # apply the patch
+            try:
+                # TODO: remove hard-coded requirement that PK is "id"
+                result = session.query(self.sqla_obj).\
                         filter( getattr(self.sqla_obj,"id") == id ).\
                         update(patch)
-            try:
-                session.commit()
                 assert(result == 1 or result == 0)
+                session.commit()
                 self.log.debug("Updated {} row(s).".format(result))
+                resp.status = falcon.HTTP_204
             except AssertionError as e:
+                session.rollback()
+                resp.status = falcon.HTTP_500
                 self.log.error(e)
             except SQLAlchemyError as e:
+                session.rollback()
+                resp.status = falcon.HTTP_500
                 self.log.error(e)
 
         else:
