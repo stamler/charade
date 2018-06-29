@@ -32,21 +32,28 @@ class Database(object):
 
         engine = create_engine(config['db'], pool_pre_ping=True)
         try:
-            self.log.debug("Attempting to load model.py")
             from .model import Base
             self.Base = Base
+            self.log.debug("Found and loaded model.py")
         except ModuleNotFoundError as e:
-            self.log.debug("model.py not found, running with automap_base")
             from sqlalchemy.ext.automap import automap_base
 
             # produce MetaData object then reflect entire database
             # unless "tables_to_include" is in config
+            # TODO: deprecate the tables_to_include config option and this code
+            # because now that we have the flexibility model.py it's redundant
+            # Should also be able to remove the import of MetaData and the next
+            # two lines as well as change the automap_base() call to use reflect
             metadata = MetaData()
             metadata.reflect(engine, only=config.get('tables_to_include', None))
+
+            # str() verifies that the loaded value is a string
+            self.tables_prefix: str = str(config['tables_prefix'])
 
             # we can then produce a set of mappings from this MetaData.
             self.Base = automap_base(metadata=metadata)
             self.Base.prepare(classname_for_table=self.custom_classname)
+            self.log.debug("model.py not found, running with automap")
 
         try:
             # TODO: There's an issue in these two try/except blocks.
@@ -133,7 +140,7 @@ class Database(object):
     def __sqla_to_json_type(self, sqla_type) -> str:
         # 6 primitive types:
         # array, boolean, object, string, null, number
-        #TODO: include validation parameters like length, regexes
+        # TODO: include validation parameters like length, regexes
         # confirming to JSON schema
         type_map: Dict[str, str] = {
             "int":"integer",
@@ -146,16 +153,7 @@ class Database(object):
 
     # custom class names
     def custom_classname(self, base, tablename: str, table) -> str:
-        return self.snake_to_camel(self.strip_prefix(tablename))
-
-    # Remove the tables_prefix
-    def strip_prefix(self, i: str) -> str:
-        # The str() verifies that the loaded value is a string
-        prefix: str = str(gc['tables_prefix'])
-        return i.replace(prefix,"")
-
-    # Convert snake_case to CamelCase
-    def snake_to_camel(self, i: str) -> str:
-        return ''.join(w.capitalize() for w in (i.rsplit('_')))
+        no_prefix = tablename.replace(self.tables_prefix,"")
+        return ''.join(w.capitalize() for w in (no_prefix.rsplit('_')))
 
 db_obj = Database(gc)

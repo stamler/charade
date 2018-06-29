@@ -10,16 +10,16 @@ from .config import config
 from .database import db_obj
 from .Resource import Resource
 from .middleware import AzureADTokenValidator, CORSComponent, CacheController
+from typing import Any, Dict
 
 # Create the falcon API instance (a WSGI app). We are doing
 # this inside of a function because it will simplify testing
 # later on. The falcon testing system can instantiate an app 
 # instance by calling create()
-def create():
+def create(cfg: Dict[str, Any]) -> falcon.API:
 
     # Initialize validation middleware
-    azure_cfg = config['azure_ad']
-    validator = AzureADTokenValidator(azure_cfg['tenant_name'], azure_cfg['app_id'])
+    validator = AzureADTokenValidator(cfg['azure_tenant'], cfg['azure_app_id'])
 
     # Initialize other middleware
     cors = CORSComponent()
@@ -27,7 +27,7 @@ def create():
 
     app = falcon.API(
             # The JSON API spec requires this media type
-            media_type="application/vnd.api+json",
+            media_type ="application/vnd.api+json",
             middleware = [ cors, validator, cache_controller ] )
 
     # instantiate resources and map routes to them
@@ -39,4 +39,4 @@ def create():
     return app
 
 # uwsgi.ini expects callable named 'app'
-app = create()
+app = create(config)
