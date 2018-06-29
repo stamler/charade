@@ -7,6 +7,7 @@ from sqlalchemy.inspection import inspect
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import DatabaseError
 from typing import Any, Dict
+from .sentinel import bind_engine as sentinel_bind_engine
 
 class Database(object):
 
@@ -32,12 +33,8 @@ class Database(object):
 
         engine = create_engine(config['db'], pool_pre_ping=True)
         try:
-
-            # TODO: load charade_middleware_authorization config and add 
-            # configure Base, then load model.py. If model.py isn't
-            # found, then automap the rest
-
-            from .model import Base
+            from .model import Base, bind_engine
+            bind_engine(engine)
             self.Base = Base
             self.log.debug("Found and loaded model.py")
         except ModuleNotFoundError as e:
@@ -48,6 +45,9 @@ class Database(object):
             Base.prepare(engine, reflect=True)
             self.Base = Base
             self.log.debug("model.py not found, running with automap")
+
+        # Bind the authorization module to our existing database engine 
+        sentinel_bind_engine(engine)
 
         try:
             # TODO: There's an issue in these two try/except blocks.

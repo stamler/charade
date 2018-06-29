@@ -10,7 +10,7 @@ from .database import db_obj
 from cryptography.x509 import load_pem_x509_certificate as load_cert
 from cryptography.hazmat.backends import default_backend
 from urllib.parse import urlsplit
-
+from .sentinel import authorize as authorize_request
 
 # The Authentication and Authorization section of the app.
 # Load keys from Microsoft and cache them for refresh_interval before reloading
@@ -141,21 +141,7 @@ class AzureADTokenValidator(object):
         except IndexError:
             res = '/'
 
-        # Get the list of groups allowed to use this method on
-        # this resource and store it in authorized_groups[]
-        Requests = db_obj.resources['Requests']['sqla_obj']
-        Roles = db_obj.resources['Roles']['sqla_obj']
-        Permissions = db_obj.resources['Permissions']['sqla_obj']
-        requests_roles = db_obj.Base.metadata.tables['_charade_mddlwr_athrztn_requests_roles']
-        query = db_obj.get_session().query(Permissions.group_oid, Roles.name,
-                    Requests.verb, Requests.resource).\
-                    join(Roles).\
-                    join(requests_roles).\
-                    join(Requests).\
-                    filter(Permissions.group_oid.in_(security_groups)).\
-                    filter(Requests.verb == req.method).\
-                    filter(Requests.resource == res)
-        row = query.first()
+        row = authorize_request(security_groups, req.method, res)
 
         if row == None:
             self.log.debug("Denied: {} {}".format(req.method, res))
