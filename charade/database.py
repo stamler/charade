@@ -49,9 +49,10 @@ class Database(object):
             self.tables_prefix: str = str(config['tables_prefix'])
 
             # Automap with database reflection
-            self.Base = automap_base()
-            self.Base.prepare(engine, reflect=True, 
+            Base = automap_base()
+            Base.prepare(engine, reflect=True, 
                                 classname_for_table=self.custom_classname)
+            self.Base = Base
             self.log.debug("model.py not found, running with automap")
 
         try:
