@@ -4,6 +4,7 @@ from sqlalchemy import create_engine, Table, Column, Integer, ForeignKey, Index,
 from sqlalchemy.orm import relationship, Session
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.sql.expression import insert, literal_column
+from sqlalchemy.engine.base import Engine
 from typing import Any, List, Tuple
 import logging
 
@@ -16,12 +17,15 @@ session: Session
 
 # Use the provided engine to interact with the database
 # https://docs.python.org/3.6/tutorial/classes.html#python-scopes-and-namespaces
-def bind_engine(engine):
+def bind_engine(engine: Engine) -> None:
     log.debug("bind_engine() called on sentinel")
     Base.metadata.bind = engine
     global session
     session = Session(engine)
 
+# Determine whether request is authorized by searching for one or more
+# relationships (rows) in the database where both the request and provided
+# group_oid can be linked. If 'row' is none, then the request is unauthorized
 def authorize(groups: List[str], method: str, resource: str) -> Tuple:
     log.debug("authorize() called on sentinel")
     query = session.query(Permissions.group_oid, Roles.name,
@@ -85,23 +89,6 @@ class Permissions(Base):
     roles_id = Column(ForeignKey('_sentinel_roles.id'), nullable=False, index=True)
 
     roles = relationship('Roles')
-
-# Determining authorization
-# When a request is received, it is authorized by determining whether there
-# exists a relationship in the database where both the request and provided
-# group_oid can be linked. A query where one or more rows are returned for 
-# given group_oid and request will indicate authorization. In the following 
-# code if 'row' is none, then the request is unauthorized
-# 
-# query = session.query(Permissions.group_oid, Roles.name,
-#             Requests.verb, Requests.resource).\
-#             join(Roles).\
-#             join(requests_roles).\
-#             join(Requests).\
-#             filter(Permissions.group_oid.in_(security_groups)).\
-#             filter(Requests.verb == req.method).\
-#             filter(Requests.resource == res)
-# row = query.first()
 
 # Populate Requests Table. Run only once at db creation
 # to set up all of the API requests for every class.
