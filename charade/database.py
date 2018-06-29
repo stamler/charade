@@ -43,21 +43,15 @@ class Database(object):
         except ModuleNotFoundError as e:
             from sqlalchemy.ext.automap import automap_base
 
-            # produce MetaData object then reflect entire database
-            # unless "tables_to_include" is in config
-            # TODO: deprecate the tables_to_include config option and this code
-            # because now that we have the flexibility model.py it's redundant
-            # Should also be able to remove the import of MetaData and the next
-            # two lines as well as change the automap_base() call to use reflect
-            metadata = MetaData()
-            metadata.reflect(engine, only=config.get('tables_to_include', None))
-
-            # str() verifies that the loaded value is a string
+            # str() verifies that the loaded value is a string.
+            # tables_prefix is used by custom_classname. May be 
+            # deprecated once authorization classes/tables are implemented
             self.tables_prefix: str = str(config['tables_prefix'])
 
-            # we can then produce a set of mappings from this MetaData.
-            self.Base = automap_base(metadata=metadata)
-            self.Base.prepare(classname_for_table=self.custom_classname)
+            # Automap with database reflection
+            self.Base = automap_base()
+            self.Base.prepare(engine, reflect=True, 
+                                classname_for_table=self.custom_classname)
             self.log.debug("model.py not found, running with automap")
 
         try:
