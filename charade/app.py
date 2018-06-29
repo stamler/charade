@@ -15,9 +15,17 @@ import logging
 
 log = logging.getLogger()
 log.setLevel(logging.DEBUG)
-ch = logging.StreamHandler()
-ch.setLevel(logging.DEBUG)
-log.addHandler(ch)
+
+# create a file handler
+handler = logging.StreamHandler()
+handler.setLevel(logging.DEBUG)
+
+# create a logging format
+formatter = logging.Formatter('%(asctime)s %(name)-12s %(levelname)-8s %(message)s')
+handler.setFormatter(formatter)
+
+# add the handlers to the logger
+log.addHandler(handler)
 
 # Create the falcon API instance (a WSGI app). We are doing
 # this inside of a function because it will simplify testing
