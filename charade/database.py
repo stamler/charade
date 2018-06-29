@@ -32,6 +32,11 @@ class Database(object):
 
         engine = create_engine(config['db'], pool_pre_ping=True)
         try:
+
+            # TODO: load charade_middleware_authorization config and add 
+            # configure Base, then load model.py. If model.py isn't
+            # found, then automap the rest
+
             from .model import Base
             self.Base = Base
             self.log.debug("Found and loaded model.py")

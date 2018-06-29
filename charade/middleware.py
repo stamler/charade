@@ -146,7 +146,7 @@ class AzureADTokenValidator(object):
         Requests = db_obj.resources['Requests']['sqla_obj']
         Roles = db_obj.resources['Roles']['sqla_obj']
         Permissions = db_obj.resources['Permissions']['sqla_obj']
-        requests_roles = db_obj.Base.metadata.tables['charade_requests_roles']
+        requests_roles = db_obj.Base.metadata.tables['_charade_mddlwr_athrztn_requests_roles']
         query = db_obj.get_session().query(Permissions.group_oid, Roles.name,
                     Requests.verb, Requests.resource).\
                     join(Roles).\
