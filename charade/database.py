@@ -43,15 +43,9 @@ class Database(object):
         except ModuleNotFoundError as e:
             from sqlalchemy.ext.automap import automap_base
 
-            # str() verifies that the loaded value is a string.
-            # tables_prefix is used by custom_classname. May be 
-            # deprecated once authorization classes/tables are implemented
-            self.tables_prefix: str = str(config['tables_prefix'])
-
             # Automap with database reflection
             Base = automap_base()
-            Base.prepare(engine, reflect=True, 
-                                classname_for_table=self.custom_classname)
+            Base.prepare(engine, reflect=True)
             self.Base = Base
             self.log.debug("model.py not found, running with automap")
 
@@ -150,10 +144,5 @@ class Database(object):
             "bool":"boolean"
         }
         return type_map[ sqla_type.python_type.__name__ ]
-
-    # custom class names (strip prefix, convert to CamelCase)
-    def custom_classname(self, base, tablename: str, table) -> str:
-        no_prefix = tablename.replace(self.tables_prefix,"")
-        return ''.join(w.capitalize() for w in (no_prefix.rsplit('_')))
 
 db_obj = Database(gc)

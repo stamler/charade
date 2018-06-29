@@ -2,8 +2,7 @@
 
 config = {
   # SQLAlchemy connection string
-  "db": "dialect+driver://username:password@host:port/database"
-  "tables_prefix": "prefix_",
+  "db": "dialect+driver://username:password@host:port/database",
   "max_multi_responses":3,
   "azure_tenant":"tenant.onmicrosoft.com",
   "azure_app_id":"https://company.ca/187man2a-edg9-1d3f-b87c-j989a20baaa0"
