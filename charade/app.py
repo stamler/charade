@@ -11,6 +11,13 @@ from .database import db_obj
 from .Resource import Resource
 from .middleware import AzureADTokenValidator, CORSComponent, CacheController
 from typing import Any, Dict
+import logging
+
+log = logging.getLogger()
+log.setLevel(logging.DEBUG)
+ch = logging.StreamHandler()
+ch.setLevel(logging.DEBUG)
+log.addHandler(ch)
 
 # Create the falcon API instance (a WSGI app). We are doing
 # this inside of a function because it will simplify testing

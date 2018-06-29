@@ -14,7 +14,7 @@ from typing import Dict, List
 
 class Resource(object):
     def __init__(self, res):
-        self.log = logging.getLogger()
+        self.log = logging.getLogger(__name__)
         self.sqla_obj = res.get('sqla_obj', None)
         if (self.sqla_obj):
             self.name = self.sqla_obj.__name__

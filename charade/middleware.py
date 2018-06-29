@@ -28,7 +28,6 @@ class AzureADTokenValidator(object):
         self.app_id = app_id
         self.tenant_name = tenant_name
         self.log = logging.getLogger(__name__)
-        self.log.addHandler(logging.NullHandler())
 
         # These requests are permitted regardless of the token
         self.exempt_methods = ['OPTIONS']

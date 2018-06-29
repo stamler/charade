@@ -13,11 +13,7 @@ class Database(object):
 
     def __init__(self, config: Dict[str, Any]) -> None:
         # Configure logging
-        self.log = logging.getLogger()
-        self.log.setLevel(logging.DEBUG)
-        ch = logging.StreamHandler()
-        ch.setLevel(logging.DEBUG)
-        self.log.addHandler(ch)
+        self.log = logging.getLogger(__name__)
         self.log.debug("__init__ Database")
 
         # TODO: PENDING_DELETION These 2 lines may become 

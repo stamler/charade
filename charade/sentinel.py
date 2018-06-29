@@ -7,11 +7,7 @@ from sqlalchemy.sql.expression import insert, literal_column
 from typing import Any, List, Tuple
 import logging
 
-log = logging.getLogger()
-log.setLevel(logging.DEBUG)
-ch = logging.StreamHandler()
-ch.setLevel(logging.DEBUG)
-log.addHandler(ch)
+log = logging.getLogger(__name__)
 
 # This declaration is annotated with a comment for 
 # mypy because of https://github.com/python/mypy/issues/2477
@@ -21,14 +17,12 @@ session: Session
 # Use the provided engine to interact with the database
 # https://docs.python.org/3.6/tutorial/classes.html#python-scopes-and-namespaces
 def bind_engine(engine):
-    global log
     log.debug("bind_engine() called on sentinel")
     Base.metadata.bind = engine
     global session
     session = Session(engine)
 
 def authorize(groups: List[str], method: str, resource: str) -> Tuple:
-    global log
     log.debug("authorize() called on sentinel")
     query = session.query(Permissions.group_oid, Roles.name,
                 Requests.verb, Requests.resource).\
@@ -156,6 +150,5 @@ def init_sentinel_tables(session):
         session.commit()
         
     except AssertionError:
-        global log
         log.debug("A table is not empty. No changes made.")
 
