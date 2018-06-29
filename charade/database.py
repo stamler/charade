@@ -156,7 +156,7 @@ class Database(object):
         }
         return type_map[ sqla_type.python_type.__name__ ]
 
-    # custom class names
+    # custom class names (strip prefix, convert to CamelCase)
     def custom_classname(self, base, tablename: str, table) -> str:
         no_prefix = tablename.replace(self.tables_prefix,"")
         return ''.join(w.capitalize() for w in (no_prefix.rsplit('_')))
