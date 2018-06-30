@@ -1,5 +1,4 @@
 import mysql.connector
-import logging
 from .config import config as gc
 from os import path
 from sqlalchemy import create_engine, MetaData
@@ -8,11 +7,11 @@ from sqlalchemy.orm import Session
 from sqlalchemy.exc import DatabaseError
 from typing import Any, Dict
 from .sentinel import bind_engine as sentinel_bind_engine
+import logging
 
 class Database(object):
 
     def __init__(self, config: Dict[str, Any]) -> None:
-        # Configure logging
         self.log = logging.getLogger(__name__)
         self.log.debug("__init__ Database")
 

@@ -5,27 +5,32 @@
 import os
 #os.chdir(os.path.dirname(os.path.realpath(__file__)))
 
+import logging
+import logging.config
+
+LOGGING = {
+    'version': 1, 'disable_existing_loggers': False,
+    'formatters': { 'simple': {
+            'format': '%(asctime)s %(name)-12s %(levelname)-8s %(message)s'
+        } },
+    'handlers': { 'console':{
+            'level':'DEBUG',
+            'class':'logging.StreamHandler',
+            'formatter': 'simple'
+        } },
+    'root': { 'level': 'DEBUG', 'handlers': ['console'] },
+}
+logging.config.dictConfig(LOGGING)
+log = logging.getLogger()
+
+
 import falcon
 from .config import config
 from .database import db_obj
 from .Resource import Resource
 from .middleware import AzureADTokenValidator, CORSComponent, CacheController
 from typing import Any, Dict
-import logging
 
-log = logging.getLogger()
-log.setLevel(logging.DEBUG)
-
-# create a file handler
-handler = logging.StreamHandler()
-handler.setLevel(logging.DEBUG)
-
-# create a logging format
-formatter = logging.Formatter('%(asctime)s %(name)-12s %(levelname)-8s %(message)s')
-handler.setFormatter(formatter)
-
-# add the handlers to the logger
-log.addHandler(handler)
 
 # Create the falcon API instance (a WSGI app). We are doing
 # this inside of a function because it will simplify testing
