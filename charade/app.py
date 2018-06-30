@@ -2,12 +2,7 @@
 # main.py
 # Called by WSGI to run the falcon app, the entry point
 
-import os
-#os.chdir(os.path.dirname(os.path.realpath(__file__)))
-
-import logging
-import logging.config
-
+# setup logging before any more imports
 LOGGING = {
     'version': 1, 'disable_existing_loggers': False,
     'formatters': { 'simple': {
@@ -20,17 +15,19 @@ LOGGING = {
         } },
     'root': { 'level': 'DEBUG', 'handlers': ['console'] },
 }
+
+import logging
+import logging.config
 logging.config.dictConfig(LOGGING)
 log = logging.getLogger()
 
-
+import os #os.chdir(os.path.dirname(os.path.realpath(__file__))) TODO: DELETE?
 import falcon
 from .config import config
 from .database import db_obj
 from .Resource import Resource
 from .middleware import AzureADTokenValidator, CORSComponent, CacheController
 from typing import Any, Dict
-
 
 # Create the falcon API instance (a WSGI app). We are doing
 # this inside of a function because it will simplify testing
