@@ -23,6 +23,7 @@ log = logging.getLogger()
 
 import os #os.chdir(os.path.dirname(os.path.realpath(__file__))) TODO: DELETE?
 import falcon
+import json
 from .config import config
 from .database import db_obj
 from .Resource import Resource
@@ -53,7 +54,13 @@ def create(cfg: Dict[str, Any]) -> falcon.API:
         for uri in res_config['URIs']:
             app.add_route(uri, resource)
 
+    app.set_error_serializer(error_serializer)
+
     return app
+
+# JSON API-compliant serializer for error objects
+def error_serializer(req, resp, exception):
+    resp.body = json.dumps({ "errors": [ exception.to_dict() ] })
 
 # uwsgi.ini expects callable named 'app'
 app = create(config)

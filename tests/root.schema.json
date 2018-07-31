@@ -1,0 +1,45 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Charade root ('/') Schema",
+  "description": "This is a schema for responses from charade root.",
+  "type": "object",
+  "properties": {
+      "data": { "type": "array", "items": { "$ref": "#/definitions/Resource" } }
+  },
+  "required": [ "data" ],
+  "additionalProperties": false,
+  "definitions": {
+      "Resource": {
+          "type": "object",
+          "properties": {
+              "type": { "type": "string" },
+              "id": { "type": "string" },
+              "attributes": { "$ref": "#/definitions/attributes" }
+          },
+          "additionalProperties": false
+      },
+      "attributes": {
+          "type": "object",
+          "properties": {
+              "json_schema": { "$ref": "#/definitions/resourceSchema" }
+          },
+          "additionalProperties": false
+      },
+      "resourceSchema": {
+          "type": "object",
+          "description": "This is mostly a JSON schema item. There's likely an easier way to do this",
+          "properties": {
+              "$schema": { "type": "string" },
+              "title": { "type": "string" },
+              "type": { "type": "string" },
+              "properties": { "type": "object" },
+              "required": { "type": "array" },
+              "additionalProperties": { "type": "boolean", "const": false }
+          },
+          "required": [
+            "$schema", "title", "type", "properties", "required", "additionalProperties"  
+          ],
+          "additionalProperties": false
+        }
+  }
+}
