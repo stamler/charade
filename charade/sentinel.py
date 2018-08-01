@@ -13,21 +13,19 @@ log = logging.getLogger(__name__)
 # This declaration is annotated with a comment for 
 # mypy because of https://github.com/python/mypy/issues/2477
 Base = declarative_base() # type: Any
-session: Session
 
 # Use the provided engine to interact with the database
 # https://docs.python.org/3.6/tutorial/classes.html#python-scopes-and-namespaces
 def bind_engine(engine: Engine) -> None:
     log.debug("bind_engine() called on sentinel")
     Base.metadata.bind = engine
-    global session
-    session = Session(engine)
 
 # Determine whether request is authorized by searching for one or more
 # relationships (rows) in the database where both the request and provided
 # group_oid can be linked. If 'row' is none, then the request is unauthorized
-def authorize(groups: List[str], method: str, resource: str) -> Tuple:
-    log.debug("authorize() called on sentinel")
+def authorized(groups: List[str], method: str, resource: str) -> bool:
+    # create a new session on every call so changes to db are always reflected
+    session = Session(Base.metadata.bind)
     query = session.query(Permissions.group_oid, Roles.name,
                 Requests.verb, Requests.resource).\
                 join(Roles).\
@@ -36,8 +34,13 @@ def authorize(groups: List[str], method: str, resource: str) -> Tuple:
                 filter(Permissions.group_oid.in_(groups)).\
                 filter(Requests.verb == method).\
                 filter(Requests.resource == resource)
-    return query.first()
-
+    row = query.first()
+    if row is None:
+        log.debug("Sentinel denied: {} {}".format(method, resource))
+        return False
+    else:
+        log.debug("Sentinel allowed: {}".format(row))
+        return True
 
 # The association table for the many-to-many relationship 
 # between Requests and Roles. No primary key

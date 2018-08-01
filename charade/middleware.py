@@ -10,7 +10,7 @@ from .database import db_obj
 from cryptography.x509 import load_pem_x509_certificate as load_cert
 from cryptography.hazmat.backends import default_backend
 from urllib.parse import urlsplit
-from .sentinel import authorize as authorize_request
+from .sentinel import authorized
 
 # The Authentication and Authorization section of the app.
 # Load keys from Microsoft and cache them for refresh_interval before reloading
@@ -69,7 +69,7 @@ class AzureADTokenValidator(object):
 
         if(access_token):
             try: 
-            token_header = jwt.get_unverified_header(access_token)
+                token_header = jwt.get_unverified_header(access_token)
             except jwt.InvalidTokenError as e:
                 raise falcon.HTTPUnauthorized("Cannot get token header: {}".format(e))
 
@@ -143,13 +143,9 @@ class AzureADTokenValidator(object):
         except IndexError:
             res = '/'
 
-        row = authorize_request(security_groups, req.method, res)
-
-        if row == None:
-            self.log.debug("Denied: {} {}".format(req.method, res))
+        if (not authorized(security_groups, req.method, res)):
+            # perhaps log the username denied here (warning?)
             raise falcon.HTTPForbidden("You are not allowed to do this.")
-        else:
-            self.log.debug("Allowed: {}".format(row))
             
     def process_request(self, req, resp):
         # Next line necessary because CORS plugin isn't activated in exception situation
