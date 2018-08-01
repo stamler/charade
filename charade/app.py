@@ -21,7 +21,6 @@ import logging.config
 logging.config.dictConfig(LOGGING)
 log = logging.getLogger()
 
-import os #os.chdir(os.path.dirname(os.path.realpath(__file__))) TODO: DELETE?
 import falcon
 import json
 from .config import config
@@ -30,10 +29,7 @@ from .Resource import Resource
 from .middleware import AzureADTokenValidator, CORSComponent, CacheController
 from typing import Any, Dict
 
-# Create the falcon API instance (a WSGI app). We are doing
-# this inside of a function because it will simplify testing
-# later on. The falcon testing system can instantiate an app 
-# instance by calling create()
+# Instantiate an app by calling create(), useful for testing
 def create(cfg: Dict[str, Any]) -> falcon.API:
 
     # Initialize validation middleware
