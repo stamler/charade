@@ -15,12 +15,12 @@ from charade import app as a
 from .assertions import assert_valid_schema
 from .config import cfg
 
-# Test configuration.
-authed_header = {
-        "Accept": "application/vnd.api+json", 
-        "Authorization": cfg['Token'],
-        "Content-Type": "application/vnd.api+json" 
+# configure test request headers
+media = {
+    "Accept": "application/vnd.api+json",
+    "Content-Type": "application/vnd.api+json" 
 }
+auth = {"Authorization": cfg['Token'] }
 
 # Initialize the app for testing
 api = a.create(cfg)
@@ -42,14 +42,14 @@ def client():
 
 # G1: Test all methods on root, both authenticated and unauthenticated 
 def test_root_unauthenticated(client):
-    response = client.simulate_request('GET','/', headers={
-        "Accept": "application/vnd.api+json"})
+    response = client.simulate_get('/', headers=media)
     assert response.headers['Content-Type'] == "application/vnd.api+json"
     assert response.status == falcon.HTTP_UNAUTHORIZED
+    assert response.json['errors'][0]['title'] == "No authorization header provided."
     assert_valid_schema(response.json,"jsonapi.schema.json")
 
 def test_root_authenticated(client):
-    response = client.simulate_request('GET','/', headers=authed_header)
+    response = client.simulate_get('/', headers={**media, **auth})
     assert response.headers['Content-Type'] == "application/vnd.api+json"
     assert response.status == falcon.HTTP_OK
     assert_valid_schema(response.json,"jsonapi.schema.json")
@@ -68,7 +68,7 @@ def test_post_location(client):
         }
 
     response = client.simulate_request('POST', '/Locations', 
-        headers=authed_header,
+        headers={**media, **auth},
         body=json.dumps(P1) # use body since json overwites Content-Type in header
         )
     assert response.headers['Content-Type'] == "application/vnd.api+json"
