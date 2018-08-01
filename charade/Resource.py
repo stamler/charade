@@ -285,19 +285,23 @@ class Resource(object):
         if req.content_length:
             # capture the request body into data
             # TODO: validate the data conforms JSON API
+            # shouldn't happen here however because on_post will also allow for
+            # loading of non-conforming data, namely arrays of resource objects,
+            # which is not JSON API compliant (although this may not fail the
+            # jsonschema validator)
             data = json.load(req.stream)
-            if data.__class__.__name__ == 'dict':
+            if data["data"].__class__.__name__ == 'dict':
                 # Processing a single objects
-                resp.status, body = self._insert_into_db( data )
+                resp.status, body = self._insert_into_db( data["data"] )
                 resp.body = json.dumps({"data":body})
-            elif data.__class__.__name__ == 'list':
+            elif data["data"].__class__.__name__ == 'list':
                 # Processing an array of objects
-                length = len(data)
+                length = len(data["data"])
                 self.log.debug("{} items POSTed.".format(length))
                 if length > db_obj.max_multi_responses:
                     self.log.debug("Multi-response max exceeded. Batching.")
                     # INSERT all data items in one shot and give one response
-                    resp.status, body = self._insert_into_db( data )
+                    resp.status, body = self._insert_into_db( data["data"] )
                     resp.body = json.dumps({"data":body})
                 else:
                     # Perform separate INSERT for each item in the data list
@@ -333,7 +337,7 @@ class Resource(object):
     # This would be a good place for validation (Marshmallow?)
     def gen_insert_dict(self, data):
         col_names = [c.name for c in inspect(self.sqla_obj).columns]
-        values = {k: v for k, v in data.items() if k in col_names }
+        values = {k: v for k, v in data["attributes"].items() if k in col_names }
         # serialize python lists and dicts to JSON in the database.
         # Marshmallow should do this eventually
         for k, v in values.items():
