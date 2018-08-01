@@ -50,6 +50,7 @@ class Database(object):
             # connection is attempted regardless of whether or not model.py
             # or automap is used. Ideally a single try-block with multiple
             # except blocks is the solution.
+            # TODO: sessionmaker() is probably more effective
             self.session = Session(engine)
         except DatabaseError as e:
             self.log.error("No Database Connection: {}".format(e))
@@ -59,6 +60,7 @@ class Database(object):
         self.resources = self.__get_resources()
 
     def get_session(self) -> Session:
+        # TODO: sessionmaker() is probably more effective
         return self.session
 
     # Read the database and load in table and column names, EXCLUDING VIEWS.
