@@ -68,7 +68,10 @@ class AzureADTokenValidator(object):
             self._load_certificates()
 
         if(access_token):
+            try: 
             token_header = jwt.get_unverified_header(access_token)
+            except jwt.InvalidTokenError as e:
+                raise falcon.HTTPUnauthorized("Cannot get token header: {}".format(e))
 
             if (token_header['kid'] in self.keys):
                 public_key = self.keys[token_header['kid']]
