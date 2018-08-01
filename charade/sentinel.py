@@ -25,6 +25,8 @@ def bind_engine(engine: Engine) -> None:
 # group_oid can be linked. If 'row' is none, then the request is unauthorized
 def authorized(groups: List[str], method: str, resource: str) -> bool:
     # create a new session on every call so changes to db are always reflected
+    # Not the best way http://docs.sqlalchemy.org/en/latest/orm/session_basics.html
+    #TODO: Fix it, even though it works now, by better understanding sessions
     session = Session(Base.metadata.bind)
     query = session.query(Permissions.group_oid, Roles.name,
                 Requests.verb, Requests.resource).\
