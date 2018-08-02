@@ -297,7 +297,8 @@ class Resource(object):
             data = json.load(req.stream)
             if data["data"].__class__.__name__ == 'dict':
                 # Processing a single objects
-                resp.status, body = self._insert_into_db( data["data"] )
+                resp.status, body, header = self._insert_into_db( data["data"] )
+                resp.set_headers(header)
                 resp.body = json.dumps({"data":body})
             elif data["data"].__class__.__name__ == 'list':
                 # Processing an array of objects
@@ -306,7 +307,7 @@ class Resource(object):
                 if length > database.max_multi_responses:
                     self.log.debug("Multi-response max exceeded. Batching.")
                     # INSERT all data items in one shot and give one response
-                    resp.status, body = self._insert_into_db( data["data"] )
+                    resp.status, body, header = self._insert_into_db( data["data"] )
                     resp.body = json.dumps({"data":body})
                 else:
                     # Perform separate INSERT for each item in the data list
@@ -323,7 +324,7 @@ class Resource(object):
                             skips += 1
                             continue
 
-                        status, body = self._insert_into_db(d)
+                        status, body, header = self._insert_into_db(d)
                         self.log.debug("client_id: {} status: {}".format(
                                                         client_id, status) )
 
@@ -339,7 +340,7 @@ class Resource(object):
 
     # Validate that the given keys are in the target table
     # then return a python obj to be used as argument for new item constructor
-    # This would be a good place for validation (Marshmallow?)
+    # This would be a good place for validation (Marshmallow? Falcon Media?)
     def gen_insert_dict(self, data):
         col_names = [c.name for c in inspect(self.sqla_obj).columns]
         values = {k: v for k, v in data["attributes"].items() if k in col_names }
@@ -351,13 +352,9 @@ class Resource(object):
         return values
 
     def _insert_into_db(self, data):
-
-        #TODO: To confirm to JSON API, "The response MUST also include a 
-        # document that contains the primary resource created
-        # http://jsonapi.org/format/#crud-updating
-
         session = database.Session()
-        response_body = {}
+        body = {}
+        header = {}
         if data.__class__.__name__ == 'list':
             # Inserting multiple items (list)
             # http://docs.sqlalchemy.org/en/latest/_modules/examples/performance/bulk_inserts.html
@@ -365,11 +362,11 @@ class Resource(object):
                                     [self.gen_insert_dict(d) for d in data])
             try:
                 session.commit()
-                response_body['rowcount'] = len(data)
+                body['rowcount'] = len(data)
                 status = falcon.HTTP_201
             except exc.SQLAlchemyError as e:
                 session.rollback()
-                response_body["errors"] = ["{}. Rolled back changes.".format(e)]
+                body["errors"] = ["{}. Rolled back changes.".format(e)]
                 status = falcon.HTTP_500
 
         else:
@@ -379,14 +376,24 @@ class Resource(object):
             session.add(item)
             try:
                 session.commit()
-                response_body['rowcount'] = 1
-                response_body['id'] = item.id
+
+                #TODO: To confirm to JSON API, "The response MUST also include a 
+                # document that contains the primary resource created
+                # http://jsonapi.org/format/#crud-updating
                 status = falcon.HTTP_201
+                header['Location'] = "/{}/{}".format(self.name, item.id)
+                body['type'] = self.name
+                body['id'] = item.id
+                #TODO: Cleanup removal of 'id' param from attributes and also
+                # make the name of the param dependent on the primary key
+                body['attributes'] = { k.name:getattr(item,k.name) 
+                                for k in inspect(self.sqla_obj).columns
+                                if k.name != 'id' }
             except exc.SQLAlchemyError as e:
-                response_body["errors"] = ["{}. Rolled back changes.".format(e)]
+                body["errors"] = ["{}. Rolled back changes.".format(e)]
                 status = falcon.HTTP_500
 
-        return status, response_body
+        return status, body, header
 
     # Remove query string params that don't match table column names
     # In falcon, where the parameter appears multiple times in the 
