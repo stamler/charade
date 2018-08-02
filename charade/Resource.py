@@ -5,7 +5,7 @@
 import falcon
 import json
 import logging
-from .database import db_obj
+import charade.database as database
 from sqlalchemy.inspection import inspect
 from sqlalchemy import exc
 from sqlalchemy import orm
@@ -31,10 +31,12 @@ class Resource(object):
     # table in the database. If the request contains an id "field expression"
     # then return a single object.
     def on_get(self, req, resp, id=None):
+        # If the root is requested, respond with all
+        # available resources and their schemas
         if self.is_root:
             resp.status = falcon.HTTP_200
             body = { "data": [] }
-            for k, v in db_obj.resources.items():
+            for k, v in database.resources.items():
                 if k == 'Root':
                     continue
                 body["data"].append({
@@ -44,7 +46,7 @@ class Resource(object):
             resp.body = json.dumps(body, default=str)
             return
 
-        session = db_obj.get_session()
+        session = database.Session()
 
         included = {}
         if id is not None:
@@ -123,7 +125,7 @@ class Resource(object):
             resp.body = json.dumps(body, default=str)
             return
 
-        session = db_obj.get_session()
+        session = database.Session()
 
         try:
             # Delete the item with given id
@@ -172,7 +174,7 @@ class Resource(object):
             data: List = json.load(req.stream)
 
             # Get an SQLAlchemy session
-            session = db_obj.get_session()
+            session = database.Session()
 
             # Build the patch object from the request
             patch: Dict = {} 
@@ -298,7 +300,7 @@ class Resource(object):
                 # Processing an array of objects
                 length = len(data["data"])
                 self.log.debug("{} items POSTed.".format(length))
-                if length > db_obj.max_multi_responses:
+                if length > database.max_multi_responses:
                     self.log.debug("Multi-response max exceeded. Batching.")
                     # INSERT all data items in one shot and give one response
                     resp.status, body = self._insert_into_db( data["data"] )
@@ -346,7 +348,7 @@ class Resource(object):
         return values
 
     def _insert_into_db(self, data):
-        session = db_obj.get_session()
+        session = database.Session()
         response_body = {}
         if data.__class__.__name__ == 'list':
             # Inserting multiple items (list)

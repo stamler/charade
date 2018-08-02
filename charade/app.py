@@ -24,13 +24,15 @@ log = logging.getLogger()
 import falcon
 import json
 from .config import config
-from .database import db_obj
+import charade.database as database
 from .Resource import Resource
 from .middleware import AzureADTokenValidator, CORSComponent, CacheController
 from typing import Any, Dict
 
 # Instantiate an app by calling create(), useful for testing
 def create(cfg: Dict[str, Any]) -> falcon.API:
+    # Initialize database
+    database.init(cfg)
 
     # Initialize validation middleware
     validator = AzureADTokenValidator(cfg['azure_tenant'], cfg['azure_app_id'])
@@ -45,7 +47,7 @@ def create(cfg: Dict[str, Any]) -> falcon.API:
             middleware = [ cors, validator, cache_controller ] )
 
     # instantiate resources and map routes to them
-    for _, res_config in db_obj.resources.items():
+    for _, res_config in database.resources.items():
         resource = Resource(res_config)
         for uri in res_config['URIs']:
             app.add_route(uri, resource)

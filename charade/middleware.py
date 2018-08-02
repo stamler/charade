@@ -6,7 +6,6 @@ import falcon
 import time
 import requests
 import logging
-from .database import db_obj
 from cryptography.x509 import load_pem_x509_certificate as load_cert
 from cryptography.hazmat.backends import default_backend
 from urllib.parse import urlsplit
