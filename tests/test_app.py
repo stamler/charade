@@ -60,7 +60,7 @@ def test_post_single_locations_authenticated(client):
     P1 = { "data": { 
             "type": "Locations",
             "attributes": { 
-                "name": "Test Location", 
+                "name": "Test Location P1", 
                 "address": "123 Sesame St", 
                 "city": "Anytown" 
             }}}
@@ -74,6 +74,40 @@ def test_post_single_locations_authenticated(client):
     assert response.json['data']['rowcount'] == 1
 
 # P2: Test POST multiple objects less than max_multi
+def test_post_two_locations_authenticated(client):
+    # Post body is *LIKE* a JSON API Resource Object 
+    # but "data" is an array of resource objects making 
+    # it non-compliant
+    P2 = { "data": [{
+            "client_id": "P2-1",
+            "type": "Locations",
+            "attributes": { 
+                "name": "Test Location P2 (1 of 2)", 
+                "address": "234 Sesame St", 
+                "city": "Happyville" 
+            }},{
+            "client_id": "P2-2", 
+            "type": "Locations",
+            "attributes": { 
+                "name": "Test Location P2 (2 of 2)", 
+                "address": "345 Sesame St", 
+                "city": "Joyville"
+            }}]
+        }
+    response = client.simulate_post('/Locations', 
+        headers={**media, **auth},
+        body=json.dumps(P2) # use body since json= overwites Content-Type in header
+        )
+    assert response.headers['Content-Type'] == "application/vnd.api+json"
+    assert response.status == falcon.HTTP_207
+    assert len(response.json['data']) == 2
+    for r in response.json['data']:
+        assert r['status'] == falcon.HTTP_201
+        assert r['body']['rowcount'] == 1
+        assert r['client_id'] in {"P2-1","P2-2"}
+
+
+
 # P3: Test POST multiple objects greater than max_multi
 # G2: Test GET data POSTed in P1 is correct
 # G3: Test GET data POSTed in P2 is correct
