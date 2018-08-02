@@ -277,6 +277,9 @@ class Resource(object):
     # endpoint and replying according to the Principle of Least Astonishment
     # https://apihandyman.io/api-design-tips-and-tricks-getting-creating-updating-or-deleting-multiple-resources-in-one-api-call/#single-and-multiple-creations-with-the-same-endpoint
     def on_post(self, req, resp):
+
+        #TODO: A server MUST return 403 Forbidden in response to an
+        # unsupported request to create a resource with a client-generated ID.
         if self.is_root:
             resp.status = falcon.HTTP_405
             body = { "errors": [{"title": "Cannot create resources here"}] }
@@ -348,6 +351,11 @@ class Resource(object):
         return values
 
     def _insert_into_db(self, data):
+
+        #TODO: To confirm to JSON API, "The response MUST also include a 
+        # document that contains the primary resource created
+        # http://jsonapi.org/format/#crud-updating
+
         session = database.Session()
         response_body = {}
         if data.__class__.__name__ == 'list':
