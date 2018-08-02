@@ -26,6 +26,7 @@ auth = {"Authorization": test_cfg['Token'] }
 api = create(test_cfg)
 
 # Initialize the database (from sentinel.py and model.py) here
+# Mock empty database that matches production parameters
 engine = create_engine(test_cfg['db'])
 # TODO: fold these into init_sentinel_tables() and init_model_tables()
 # and include verification of emptiness prior to create_all()
@@ -37,8 +38,6 @@ sentinel.init_sentinel_tables(session)
 @pytest.fixture
 def client():
     return testing.TestClient(api)
-
-# Mock empty database that matches production parameters
 
 # G1: Test all methods on root, both authenticated and unauthenticated 
 def test_get_root_unauthenticated(client):
@@ -57,9 +56,6 @@ def test_get_root_authenticated(client):
 
 # P1: Test POST of valid single object
 def test_post_single_locations_authenticated(client):
-    #TODO: db_obj is hard wired to use the config of the main app rather than
-    # the test configuration. This needs to be factored out, likely by 
-    # instantiating the db_obj element outside of database.py, probably app.py
     # Post body is a JSON API Resource Object
     P1 = { "data": { 
             "type": "Locations",
