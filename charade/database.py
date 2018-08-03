@@ -3,12 +3,12 @@ from os import path
 from sqlalchemy import create_engine, MetaData
 from sqlalchemy.inspection import inspect
 from sqlalchemy.orm import sessionmaker
-#from sqlalchemy.exc import DatabaseError, move this where the Sessionmaker is called
+from sqlalchemy.engine.base import Engine
 from typing import Any, Dict
-from .sentinel import bind_engine as sentinel_bind_engine
 import logging
 
 Session: sessionmaker
+engine: Engine
 resources: Dict[str, Any]
 
 def init(config: Dict[str, Any]) -> None:
@@ -22,6 +22,7 @@ def init(config: Dict[str, Any]) -> None:
                     "If true, DB connection may fail due to networking.\n"
                     "On Docker for Mac, try host.docker.internal")
 
+    global engine
     engine = create_engine(config['db'], pool_pre_ping=True)
 
     try:
@@ -36,9 +37,6 @@ def init(config: Dict[str, Any]) -> None:
         LoadedBase = automap_base()
         LoadedBase.prepare(engine, reflect=True)
         log.debug("model.py not found, running with automap")
-
-    # Bind the authorization module to our existing database engine 
-    sentinel_bind_engine(engine)
     
     global Session
     Session = sessionmaker(bind=engine)

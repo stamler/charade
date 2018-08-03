@@ -25,6 +25,7 @@ import falcon
 import json
 from .config import config
 import charade.database as database
+import charade.sentinel as sentinel
 from .Resource import Resource
 from .middleware import AzureADTokenValidator, CORSComponent, CacheController
 from typing import Any, Dict
@@ -33,6 +34,9 @@ from typing import Any, Dict
 def create(cfg: Dict[str, Any]) -> falcon.API:
     # Initialize database
     database.init(cfg)
+
+    # Bind the authorization module to our existing database engine 
+    sentinel.bind_engine(database.engine)
 
     # Initialize validation middleware
     validator = AzureADTokenValidator(cfg['azure_tenant'], cfg['azure_app_id'])

@@ -4,7 +4,7 @@ import pytest
 import json
 from falcon import testing
 from sqlalchemy import create_engine
-from sqlalchemy.orm import Session
+import logging
 
 # project imports
 from charade import sentinel
@@ -22,18 +22,19 @@ media = {
 }
 auth = {"Authorization": test_cfg['Token'] }
 
+# Set logging level for SQLAlchemy
+logging.getLogger('sqlalchemy.engine').setLevel(logging.DEBUG)
+
 # Initialize the app for testing
 api = create(test_cfg)
 
 # Initialize the database (from sentinel.py and model.py) here
 # Mock empty database that matches production parameters
-engine = create_engine(test_cfg['db'])
-# TODO: fold these into init_sentinel_tables() and init_model_tables()
-# and include verification of emptiness prior to create_all()
-model.Base.metadata.create_all(engine)
-sentinel.Base.metadata.create_all(engine)
-session = Session(engine)
-sentinel.init_sentinel_tables(session)
+# engine = create_engine(test_cfg['db'])
+model.init_model_tables()
+#model.drop_model_tables()
+#sentinel.drop_sentinel_tables()
+sentinel.init_sentinel_tables()
 
 @pytest.fixture
 def client():

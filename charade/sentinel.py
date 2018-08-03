@@ -1,14 +1,17 @@
 # sentinel, the authorization mechanism and used by the middleware
- 
+
+import logging
+log = logging.getLogger(__name__)
+
 from sqlalchemy import create_engine, Table, Column, Integer, ForeignKey, Index, String
 from sqlalchemy.orm import relationship, Session
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.sql.expression import insert, literal_column
 from sqlalchemy.engine.base import Engine
 from typing import Any, List, Tuple
-import logging
 
-log = logging.getLogger(__name__)
+import charade.database as database
+
 
 # This declaration is annotated with a comment for 
 # mypy because of https://github.com/python/mypy/issues/2477
@@ -99,11 +102,27 @@ class Permissions(Base):
 # to set up all of the API requests for every class.
 # Resource URLs are given ids on tens, tens+0 being GET
 # Aborts on non-empty table
-def init_sentinel_tables(session):
+def init_sentinel_tables(rebuild=False):
+
+    session = database.Session()
+    engine = session.get_bind()
+
+    if rebuild:
+        # Delete all tables that exist and recreate them
+        # TODO: !! Confirm that this Base is not shared with model.py!!
+        # otherwise set tables=[] to restrict to these tables
+        drop_sentinel_tables()
+
+    # Create any tables that don't exist
+    log.debug("Creating sentinel tables...")
+    Base.metadata.create_all(engine, checkfirst=True)
+
     try:
-        # TODO: Drop all of the tables if flag is set then re-create them
-        # TODO: test that all tables *don't exist* rather than one is empty
+        # Make sure every table is empty before proceeding
+        assert(session.query(requests_roles).first() is None)
         assert(session.query(Requests).first() is None)
+        assert(session.query(Roles).first() is None)
+        assert(session.query(Permissions).first() is None)
         
         session.add(Requests(id=1,verb='GET',resource='/'))
     
@@ -142,5 +161,12 @@ def init_sentinel_tables(session):
         session.commit()
         
     except AssertionError:
-        log.debug("A table is not empty. No changes made.")
+        log.debug("At least one table is not empty. No changes made.")
 
+def drop_sentinel_tables():
+
+    session = database.Session()
+    engine = session.get_bind()
+
+    log.debug("Dropping sentinel tables...")
+    Base.metadata.drop_all(engine)
