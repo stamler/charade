@@ -3,14 +3,12 @@
 import logging
 log = logging.getLogger(__name__)
 
-from sqlalchemy import create_engine, Table, Column, Integer, ForeignKey, Index, String
+from sqlalchemy import Table, Column, Integer, ForeignKey, Index, String
 from sqlalchemy.orm import relationship, Session
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.sql.expression import insert, literal_column
 from sqlalchemy.engine.base import Engine
 from typing import Any, List, Tuple
-
-import charade.database as database
 
 
 # This declaration is annotated with a comment for 
@@ -102,20 +100,17 @@ class Permissions(Base):
 # to set up all of the API requests for every class.
 # Resource URLs are given ids on tens, tens+0 being GET
 # Aborts on non-empty table
-def init_sentinel_tables(rebuild=False):
-
-    session = database.Session()
-    engine = session.get_bind()
-
+def init_sentinel_tables(engine: Engine, rebuild=False):
     if rebuild:
         # Delete all tables that exist and recreate them
         # TODO: !! Confirm that this Base is not shared with model.py!!
         # otherwise set tables=[] to restrict to these tables
-        drop_sentinel_tables()
+        drop_sentinel_tables(engine)
 
     # Create any tables that don't exist
     log.debug("Creating sentinel tables...")
     Base.metadata.create_all(engine, checkfirst=True)
+    session = Session(engine)
 
     try:
         # Make sure every table is empty before proceeding
@@ -163,10 +158,6 @@ def init_sentinel_tables(rebuild=False):
     except AssertionError:
         log.debug("At least one table is not empty. No changes made.")
 
-def drop_sentinel_tables():
-
-    session = database.Session()
-    engine = session.get_bind()
-
+def drop_sentinel_tables(engine: Engine):
     log.debug("Dropping sentinel tables...")
     Base.metadata.drop_all(engine)

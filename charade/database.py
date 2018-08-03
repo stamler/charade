@@ -1,6 +1,6 @@
 import mysql.connector
 from os import path
-from sqlalchemy import create_engine, MetaData
+from sqlalchemy import create_engine
 from sqlalchemy.inspection import inspect
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.engine.base import Engine
