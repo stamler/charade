@@ -10,7 +10,6 @@ import logging
 
 Session: sessionmaker
 resources: Dict[str, Any]
-max_multi_responses: int
 
 def init(config: Dict[str, Any]) -> None:
     log = logging.getLogger(__name__)
@@ -46,9 +45,6 @@ def init(config: Dict[str, Any]) -> None:
 
     global resources
     resources = __get_resources(LoadedBase)
-
-    global max_multi_responses
-    max_multi_responses = config.get('max_multi_responses', 5)
 
 # Read the database and load in table and column names, EXCLUDING VIEWS.
 # NB previous version without SQLALchemy included VIEWS
