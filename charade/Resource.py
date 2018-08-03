@@ -325,14 +325,18 @@ class Resource(object):
 
     def _insert_into_db(self, data):
         session = database.Session()
-        body = {}
-        header = {}
+        body: Dict = {}
+        header: Dict = {}
         if data.__class__.__name__ == 'list':
             # Inserting multiple items (list)
             # http://docs.sqlalchemy.org/en/latest/_modules/examples/performance/bulk_inserts.html
             session.bulk_insert_mappings(self.sqla_obj,
                                     [self.gen_insert_dict(d) for d in data])
             try:
+                #TODO: Make this response body more JSON API-like. Include
+                # created items + Location headers if efficiently possible
+                # This involves getting inserted IDs which may be impossible
+                #  for bulk inserts
                 session.commit()
                 body['rowcount'] = len(data)
                 status = falcon.HTTP_201

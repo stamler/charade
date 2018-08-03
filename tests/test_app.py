@@ -39,7 +39,7 @@ sentinel.init_sentinel_tables(session)
 def client():
     return testing.TestClient(api)
 
-# G1: Test all methods on root, both authenticated and unauthenticated 
+# G1: Test get on root unauthenticated 
 def test_get_root_unauthenticated(client):
     response = client.simulate_get('/', headers=media)
     assert response.headers['Content-Type'] == "application/vnd.api+json"
@@ -70,10 +70,15 @@ def test_post_single_locations_authenticated(client):
         body=json.dumps(P1) # use body since json overwites Content-Type in header
         )
     assert response.headers['Content-Type'] == "application/vnd.api+json"
+    assert '/Locations/' in response.headers['Location'] 
     assert response.status == falcon.HTTP_201
-    assert response.json['data']['rowcount'] == 1
+    data = response.json['data']
+    assert data['type'] == 'Locations'
+    assert 'id' in data
+    assert data['attributes'] == P1['data']['attributes']
 
-# P2: Test POST multiple objects less than max_multi
+
+# P2: Test POST multiple objects
 def test_post_two_locations_authenticated(client):
     # Post body is *LIKE* a JSON API Resource Object 
     # but "data" is an array of resource objects making 
@@ -99,19 +104,13 @@ def test_post_two_locations_authenticated(client):
         body=json.dumps(P2) # use body since json= overwites Content-Type in header
         )
     assert response.headers['Content-Type'] == "application/vnd.api+json"
-    assert response.status == falcon.HTTP_207
+    assert response.status == falcon.HTTP_201
     assert len(response.json['data']) == 2
-    for r in response.json['data']:
-        assert r['status'] == falcon.HTTP_201
-        assert r['body']['rowcount'] == 1
-        assert r['client_id'] in {"P2-1","P2-2"}
 
 
 
-# P3: Test POST multiple objects greater than max_multi
 # G2: Test GET data POSTed in P1 is correct
 # G3: Test GET data POSTed in P2 is correct
-# G4: Test GET data POSTed in P3 is correct
 # G5: Test GET all resources number matches
 # D1: Test DELETE first item from P2
 # G6: Test GET item deleted in D1, confirm it is gone
