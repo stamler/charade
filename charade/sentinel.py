@@ -100,17 +100,8 @@ class Permissions(Base):
 # to set up all of the API requests for every class.
 # Resource URLs are given ids on tens, tens+0 being GET
 # Aborts on non-empty table
-def init_sentinel_tables(engine: Engine, rebuild=False):
-    if rebuild:
-        # Delete all tables that exist and recreate them
-        # TODO: !! Confirm that this Base is not shared with model.py!!
-        # otherwise set tables=[] to restrict to these tables
-        drop_sentinel_tables(engine)
 
-    # Create any tables that don't exist
-    log.debug("Creating sentinel tables...")
-    Base.metadata.create_all(engine, checkfirst=True)
-    session = Session(engine)
+def init_sentinel_tables(session: Session):
 
     try:
         # Make sure every table is empty before proceeding
@@ -157,6 +148,17 @@ def init_sentinel_tables(engine: Engine, rebuild=False):
         
     except AssertionError:
         log.debug("At least one table is not empty. No changes made.")
+
+def create_sentinel_tables(engine: Engine, rebuild=False):
+    if rebuild:
+        # Delete all tables that exist and recreate them
+        # TODO: !! Confirm that this Base is not shared with model.py!!
+        # otherwise set tables=[] to restrict to these tables
+        drop_sentinel_tables(engine)
+
+    # Create any tables that don't exist
+    log.debug("Creating sentinel tables...")
+    Base.metadata.create_all(engine, checkfirst=True)
 
 def drop_sentinel_tables(engine: Engine):
     log.debug("Dropping sentinel tables...")
