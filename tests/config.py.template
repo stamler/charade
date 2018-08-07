@@ -4,5 +4,7 @@ config = {
   "db": "dialect+driver://username:password@host:port/database",
   "azure_tenant":"tenant.onmicrosoft.com",
   "azure_app_id":"https://company.ca/187man2a-edg9-1d3f-b87c-j989a20baaa0",
-  "Token": "Bearer <JWT TOKEN>"
+  "Token": "Bearer <JWT TOKEN>",
+  "UNRESTRICTED_ALL_group_oid": "<azure_group_oid>",
+  "READ_ALL_group_oid": "<azure_group_oid>"
 }
