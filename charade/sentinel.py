@@ -95,7 +95,7 @@ class Permissions(Base):
 # Resource URLs are given ids on tens, tens+0 being GET
 # Aborts on non-empty table
 
-def init_sentinel_tables(session: Session, model_base):
+def init_sentinel_tables(session: Session, model_base, permissions):
 
     try:
         # Make sure every table is empty before proceeding
@@ -150,5 +150,10 @@ def init_sentinel_tables(session: Session, model_base):
         session.execute(ins)
         session.commit()
         
+        # Populate permissions from the dict (group_oid, role_id)
+        for g, r in permissions.items():
+            session.add(Permissions(group_oid=g, roles_id=r))
+        session.commit()
+
     except AssertionError:
         log.debug("At least one table is not empty. No changes made.")
