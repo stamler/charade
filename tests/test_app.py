@@ -1,19 +1,42 @@
-# library imports
 import falcon
 import pytest
 import json
 from falcon import testing
-from sqlalchemy import create_engine
-import logging
 
-# project imports
+# Set logging level for SQLAlchemy
+import logging
+logging.getLogger('sqlalchemy.engine').setLevel(logging.DEBUG)
+
+# Initialize the database (from sentinel.py and model.py)
+from .config import test_cfg
+from sqlalchemy import create_engine
 from charade import sentinel
 from charade import model
+engine = create_engine(test_cfg['db'])
+model.Base.metadata.drop_all(engine)
+model.Base.metadata.create_all(engine)
+sentinel.Base.metadata.drop_all(engine)
+sentinel.Base.metadata.create_all(engine)
+
+#TODO: PROBLEM!!! The creation of default row entries by init_sentinel_tables 
+# does not reflect the resources in init_model_tables() because the two do 
+# not share a common set of MetaData !!!!
+# The base used by sentinel.py will always be its own base. What we need to do
+# is pass in a base from the fully initialized app after all tables are present.
+# This can be achieved by getting a session from database after create() is 
+# called and passing it to init_sentinel_tables() instead of an engine.
+# We should therefore cleanup the above variable "engine" prior to proceeding
+# not sure how to do that or if it's necessary
+
+# Initialize the app for testing
 from charade.app import create
+from sqlalchemy.orm import Session
+api = create(test_cfg)
+sentinel.init_sentinel_tables(Session(engine), model.Base)
+# TODO: delete session and engine used for setup here?
 
 # testing imports
 from .assertions import assert_valid_schema
-from .config import test_cfg
 
 # configure test request headers
 media = {
@@ -22,19 +45,6 @@ media = {
 }
 auth = {"Authorization": test_cfg['Token'] }
 
-# Set logging level for SQLAlchemy
-logging.getLogger('sqlalchemy.engine').setLevel(logging.DEBUG)
-
-# Initialize the app for testing
-api = create(test_cfg)
-
-# Initialize the database (from sentinel.py and model.py) here
-# Mock empty database that matches production parameters
-# engine = create_engine(test_cfg['db'])
-model.init_model_tables()
-#model.drop_model_tables()
-#sentinel.drop_sentinel_tables()
-sentinel.init_sentinel_tables()
 
 @pytest.fixture
 def client():
