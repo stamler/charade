@@ -32,23 +32,20 @@ from typing import Any, Dict
 
 # Instantiate an app by calling create(), useful for testing
 def create(cfg: Dict[str, Any]) -> falcon.API:
-    # Initialize database
+    # Initialize database, using either model.py or reflection (automap_base)
     database.init(cfg)
 
     # Bind the authorization module to our existing database engine 
+    # This should work instead allowing us to delete the method: 
+    # sentinel.Base.metadata.bind = database.engine
     sentinel.bind_engine(database.engine)
-
-    # Initialize validation middleware
-    validator = AzureADTokenValidator(cfg['azure_tenant'], cfg['azure_app_id'])
-
-    # Initialize other middleware
-    cors = CORSComponent()
-    cache_controller = CacheController()
-
+    
     app = falcon.API(
             # The JSON API spec requires this media type
             media_type ="application/vnd.api+json",
-            middleware = [ cors, validator, cache_controller ] )
+            middleware = [ CORSComponent(), 
+                AzureADTokenValidator(cfg['azure_tenant'], cfg['azure_app_id']), 
+                CacheController() ] )
 
     # instantiate resources and map routes to them
     for _, res_config in database.resources.items():
