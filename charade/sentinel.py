@@ -15,12 +15,6 @@ from typing import Any, List, Tuple
 # mypy because of https://github.com/python/mypy/issues/2477
 Base = declarative_base(name="Sentinel Base") # type: Any
 
-# Use the provided engine to interact with the database
-# https://docs.python.org/3.6/tutorial/classes.html#python-scopes-and-namespaces
-#def bind_engine(engine: Engine) -> None:
-#    log.debug("bind_engine() called on sentinel")
-#    Base.metadata.bind = engine
-
 # Determine whether request is authorized by searching for one or more
 # relationships (rows) in the database where both the request and provided
 # group_oid can be linked. If 'row' is none, then the request is unauthorized
