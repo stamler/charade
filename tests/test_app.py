@@ -32,7 +32,11 @@ sentinel.Base.metadata.create_all(engine)
 from charade.app import create
 from sqlalchemy.orm import Session
 api = create(test_cfg)
-sentinel.init_sentinel_tables(Session(engine), model.Base)
+permissions = {
+    test_cfg.get('UNRESTRICTED_ALL_group_oid'): 1,
+    test_cfg.get('READ_ALL_group_oid'): 1000
+}
+sentinel.init_sentinel_tables(Session(engine), model.Base, permissions)
 # TODO: delete session and engine used for setup here?
 
 # testing imports
