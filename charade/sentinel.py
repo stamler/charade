@@ -13,7 +13,7 @@ from typing import Any, List, Tuple
 
 # This declaration is annotated with a comment for 
 # mypy because of https://github.com/python/mypy/issues/2477
-Base = declarative_base() # type: Any
+Base = declarative_base(name="Sentinel Base") # type: Any
 
 # Use the provided engine to interact with the database
 # https://docs.python.org/3.6/tutorial/classes.html#python-scopes-and-namespaces
