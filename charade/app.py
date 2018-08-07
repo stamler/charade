@@ -37,8 +37,8 @@ def create(cfg: Dict[str, Any]) -> falcon.API:
 
     # Bind the authorization module to our existing database engine 
     # This should work instead allowing us to delete the method: 
-    # sentinel.Base.metadata.bind = database.engine
-    sentinel.bind_engine(database.engine)
+    sentinel.Base.metadata.bind = database.engine
+    #sentinel.bind_engine(database.engine)
     
     app = falcon.API(
             # The JSON API spec requires this media type

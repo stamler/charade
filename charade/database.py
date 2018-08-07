@@ -26,8 +26,9 @@ def init(config: Dict[str, Any]) -> None:
     engine = create_engine(config['db'], pool_pre_ping=True)
 
     try:
-        from .model import Base, bind_engine
-        bind_engine(engine)
+        from .model import Base
+        Base.metadata.bind = engine
+        #bind_engine(engine)
         LoadedBase = Base
         log.debug("Found and loaded model.py")
     except ModuleNotFoundError:

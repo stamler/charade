@@ -17,9 +17,9 @@ Base = declarative_base() # type: Any
 
 # Use the provided engine to interact with the database
 # https://docs.python.org/3.6/tutorial/classes.html#python-scopes-and-namespaces
-def bind_engine(engine: Engine) -> None:
-    log.debug("bind_engine() called on sentinel")
-    Base.metadata.bind = engine
+#def bind_engine(engine: Engine) -> None:
+#    log.debug("bind_engine() called on sentinel")
+#    Base.metadata.bind = engine
 
 # Determine whether request is authorized by searching for one or more
 # relationships (rows) in the database where both the request and provided
@@ -148,18 +148,3 @@ def init_sentinel_tables(session: Session):
         
     except AssertionError:
         log.debug("At least one table is not empty. No changes made.")
-
-def create_sentinel_tables(engine: Engine, rebuild=False):
-    if rebuild:
-        # Delete all tables that exist and recreate them
-        # TODO: !! Confirm that this Base is not shared with model.py!!
-        # otherwise set tables=[] to restrict to these tables
-        drop_sentinel_tables(engine)
-
-    # Create any tables that don't exist
-    log.debug("Creating sentinel tables...")
-    Base.metadata.create_all(engine, checkfirst=True)
-
-def drop_sentinel_tables(engine: Engine):
-    log.debug("Dropping sentinel tables...")
-    Base.metadata.drop_all(engine)
