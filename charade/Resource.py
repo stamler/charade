@@ -333,10 +333,10 @@ class Resource(object):
             session.bulk_insert_mappings(self.sqla_obj,
                                     [self.gen_insert_dict(d) for d in data])
             try:
-                #TODO: Make this response body more JSON API-like. Include
+                # TODO: Make this response body more JSON API-like. Include
                 # created items + Location headers if efficiently possible
-                # This involves getting inserted IDs which may be impossible
-                #  for bulk inserts
+                # This involves getting inserted IDs which may not be possible
+                # for bulk insert unless specifying the ID in the POST request
                 session.commit()
                 body['rowcount'] = len(data)
                 status = falcon.HTTP_201
@@ -353,7 +353,7 @@ class Resource(object):
             try:
                 session.commit()
 
-                #TODO: To confirm to JSON API, "The response MUST also include a 
+                # To conform to JSON API, "The response MUST also include a 
                 # document that contains the primary resource created
                 # http://jsonapi.org/format/#crud-updating
                 status = falcon.HTTP_201

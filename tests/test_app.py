@@ -120,7 +120,7 @@ def test_post_two_locations_authenticated(client):
         )
     assert response.headers['Content-Type'] == "application/vnd.api+json"
     assert response.status == falcon.HTTP_201
-    assert len(response.json['data']) == 2
+    assert response.json['data']['rowcount'] == 2
 
 
 
