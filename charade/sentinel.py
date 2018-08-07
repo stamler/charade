@@ -95,7 +95,7 @@ class Permissions(Base):
 # Resource URLs are given ids on tens, tens+0 being GET
 # Aborts on non-empty table
 
-def init_sentinel_tables(session: Session):
+def init_sentinel_tables(session: Session, model_base):
 
     try:
         # Make sure every table is empty before proceeding
@@ -106,9 +106,19 @@ def init_sentinel_tables(session: Session):
         
         session.add(Requests(id=1,verb='GET',resource='/'))
     
-        # First populate requests for every endpoint
+        # First populate requests for sentinel endpoints
         tens = 10
         for subclass in Base.__subclasses__():
+            resource = '/' + subclass.__name__
+            session.add(Requests(id=tens,verb='GET',resource=resource))
+            session.add(Requests(id=tens+1,verb='POST',resource=resource))
+            session.add(Requests(id=tens+2,verb='PATCH',resource=resource))
+            session.add(Requests(id=tens+3,verb='DELETE',resource=resource))
+            session.commit()
+            tens += 10
+
+        # Then populate requests for model endpoints
+        for subclass in model_base.__subclasses__():
             resource = '/' + subclass.__name__
             session.add(Requests(id=tens,verb='GET',resource=resource))
             session.add(Requests(id=tens+1,verb='POST',resource=resource))
