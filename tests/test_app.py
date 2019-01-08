@@ -54,23 +54,35 @@ auth = {"Authorization": test_cfg['Token'] }
 def client():
     return testing.TestClient(api)
 
-# G1: Test get on root unauthenticated 
-def test_get_root_unauthenticated(client):
-    response = client.simulate_get('/', headers=media)
+def unauthenticated(response):
     assert response.headers['Content-Type'] == "application/vnd.api+json"
     assert response.status == falcon.HTTP_UNAUTHORIZED
     assert response.json['errors'][0]['title'] == "No authorization header provided."
     assert_valid_schema(response.json,"jsonapi.schema.json")
 
-def test_get_root_authenticated(client):
-    response = client.simulate_get('/', headers={**media, **auth})
+def get(response, **kwargs):
     assert response.headers['Content-Type'] == "application/vnd.api+json"
     assert response.status == falcon.HTTP_OK
     assert_valid_schema(response.json,"jsonapi.schema.json")
-    assert_valid_schema(response.json, "root.schema.json" )
+    if kwargs.get('schema', None):
+        assert_valid_schema(response.json, kwargs['schema']) 
+    if kwargs.get('data', None):
+        body = response.json
+        del body['data']['id']
+        assert kwargs['data'] == body
+
+# G1: Test get on root
+def test_get_root(client):
+    # Unauthenticated
+    response = client.simulate_get('/', headers=media)
+    unauthenticated(response)
+
+    # Authenticated
+    response = client.simulate_get('/', headers={**media, **auth})
+    get(response, schema="root.schema.json")
 
 # P1: Test POST of valid single object
-def test_post_single_locations_authenticated(client):
+def test_post_single_locations(client):
     # Post body is a JSON API Resource Object
     P1 = { "data": { 
             "type": "Locations",
@@ -80,6 +92,13 @@ def test_post_single_locations_authenticated(client):
                 "city": "Anytown" 
             }}}
 
+    # Unauthenticated
+    response = client.simulate_post('/Locations', headers=media,
+        body=json.dumps(P1) # use body since json overwites Content-Type in header
+        )
+    unauthenticated(response)
+
+    # Authenticated
     response = client.simulate_post('/Locations', 
         headers={**media, **auth},
         body=json.dumps(P1) # use body since json overwites Content-Type in header
@@ -92,9 +111,13 @@ def test_post_single_locations_authenticated(client):
     assert 'id' in data
     assert data['attributes'] == P1['data']['attributes']
 
+    # G2: Test GET data POSTed in P1 is correct
+    response = client.simulate_get("/Locations/{}".format(data['id']), 
+                                                headers={**media, **auth})
+    get(response, data=P1)
 
 # P2: Test POST multiple objects
-def test_post_two_locations_authenticated(client):
+def test_post_two_locations(client):
     # Post body is *LIKE* a JSON API Resource Object 
     # but "data" is an array of resource objects making 
     # it non-compliant
@@ -114,6 +137,14 @@ def test_post_two_locations_authenticated(client):
                 "city": "Joyville"
             }}]
         }
+
+    # Unauthenticated
+    response = client.simulate_post('/Locations', headers=media,
+        body=json.dumps(P2) # use body since json overwites Content-Type in header
+        )
+    unauthenticated(response)
+
+    # Authenticated
     response = client.simulate_post('/Locations', 
         headers={**media, **auth},
         body=json.dumps(P2) # use body since json= overwites Content-Type in header
@@ -122,10 +153,12 @@ def test_post_two_locations_authenticated(client):
     assert response.status == falcon.HTTP_201
     assert response.json['data']['rowcount'] == 2
 
+    # G3: Test GET data POSTed in P2 is correct
+    response = client.simulate_get('/Locations?name=Test+Location+P2+%281+of+2%29,Test+Location+P2+%282+of+2%29',
+                                            headers={**media, **auth})
+    get(response, data=P2)
 
 
-# G2: Test GET data POSTed in P1 is correct
-# G3: Test GET data POSTed in P2 is correct
 # G5: Test GET all resources number matches
 # D1: Test DELETE first item from P2
 # G6: Test GET item deleted in D1, confirm it is gone
