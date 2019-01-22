@@ -299,13 +299,13 @@ class Resource(object):
                 # Processing a single objects
                 resp.status, body, header = self._insert_into_db( data["data"] )
                 resp.set_headers(header)
-                resp.body = json.dumps({"data":body})
+                resp.body = json.dumps({"data":body}, default=str)
             elif data["data"].__class__.__name__ == 'list':
                 # Processing an array of objects
                 # INSERT all items in one transaction and fail or succeed
                 self.log.debug("{} items POSTed.".format(len(data["data"])))
                 resp.status, body, header = self._insert_into_db( data["data"] )
-                resp.body = json.dumps({"data":body})
+                resp.body = json.dumps({"data":body}, default=str)
             else:
                 resp.status = falcon.HTTP_500
                 resp.body = json.dumps({"errors": [{"title": "Unrecognized data POSTed"}]})
